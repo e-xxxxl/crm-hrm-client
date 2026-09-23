@@ -90,8 +90,8 @@ export default function PayslipView({ id, onClose, onChanged }) {
           </div>
 
           <p className="text-2xs text-ink-500">
-            PAYE {money(slip.paye)} · Pension (employee) {money(slip.pensionEmployee)} · Pension (employer){" "}
-            {money(slip.pensionEmployer)}
+            PAYE (you pay) {money(slip.paye)} · PAYE (company pays) {money(slip.payeEmployer)} · Pension (employee){" "}
+            {money(slip.pensionEmployee)} · Pension (employer) {money(slip.pensionEmployer)}
             {slip.nhf ? ` · NHF ${money(slip.nhf)}` : ""}
             {slip.tripCount ? ` · ${slip.tripCount} trips` : ""}
           </p>
@@ -101,14 +101,15 @@ export default function PayslipView({ id, onClose, onChanged }) {
               <summary className="cursor-pointer text-xs font-medium text-ink-700">PAYE calculation</summary>
               <div className="mt-2 space-y-1 text-xs text-ink-600">
                 <p>Annual taxable income: {money(slip.taxDetail.taxableIncome)}</p>
-                <p>Consolidated relief allowance: {money(slip.taxDetail.cra)}</p>
                 {slip.taxDetail.breakdown?.map((b, i) => (
                   <p key={i}>
                     {money(b.amount)} @ {(b.rate * 100).toFixed(0)}% = {money(b.tax)}
                   </p>
                 ))}
-                <p>Annual PAYE: {money(slip.taxDetail.annualTax)} ({slip.taxDetail.effectiveRate}% effective)</p>
-                {slip.taxDetail.minimumTaxApplied && <p>Minimum tax (1% of gross) applied.</p>}
+                <p>
+                  Annual PAYE: {money(slip.taxDetail.annualTax)} ({slip.taxDetail.effectiveRate}% effective) — split
+                  50/50: {money(slip.taxDetail.employeeAnnualTax)} you, {money(slip.taxDetail.employerAnnualTax)} company
+                </p>
               </div>
             </details>
           )}

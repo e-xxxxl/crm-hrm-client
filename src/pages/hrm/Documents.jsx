@@ -25,6 +25,7 @@ const label = (c) => c.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase(
 export default function Documents() {
   const can = useAuth((s) => s.can);
   const canWrite = can("document:write");
+  const canWriteOwn = can("document:write_own");
   const canDelete = can("document:delete");
 
   const [filters, setFilters] = useState({ search: "", category: "", status: "", scope: "" });
@@ -52,7 +53,11 @@ export default function Documents() {
     <>
       <PageHeader
         title="Documents & Contracts"
-        actions={canWrite && <Button onClick={() => setEditing("new")}>Add document</Button>}
+        actions={
+          (canWrite || canWriteOwn) && (
+            <Button onClick={() => setEditing("new")}>{canWrite ? "Add document" : "Upload my document"}</Button>
+          )
+        }
       />
 
       {s && (s.expired > 0 || s.within7 > 0 || s.within14 > 0 || s.within30 > 0) && (
@@ -179,6 +184,7 @@ export default function Documents() {
       {editing && (
         <DocumentForm
           value={editing === "new" ? null : editing}
+          selfOnly={editing === "new" && !canWrite && canWriteOwn}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -202,9 +208,12 @@ function Tile({ label: l, value, tone }) {
   );
 }
 
-function DocumentForm({ value, onClose, onSaved }) {
+function DocumentForm({ value, selfOnly = false, onClose, onSaved }) {
   const isNew = !value;
-  const employees = useApiQuery("/hrm/employees", { params: { limit: 300, status: "active", sort: "lastName" } });
+  const employees = useApiQuery("/hrm/employees", {
+    params: { limit: 300, status: "active", sort: "lastName" },
+    skip: selfOnly,
+  });
   const [form, setForm] = useState({
     employee: value?.employee?.id || value?.employee || "",
     category: value?.category || "contract",
@@ -218,7 +227,7 @@ function DocumentForm({ value, onClose, onSaved }) {
     expiryDate: value?.expiryDate ? value.expiryDate.slice(0, 10) : "",
   });
   const { mutate, loading, error } = useMutation((client, body) =>
-    isNew ? client.post("/hrm/documents", body) : client.patch(`/hrm/documents/${value.id}`, body),
+    isNew ? client.post(selfOnly ? "/hrm/documents/me" : "/hrm/documents", body) : client.patch(`/hrm/documents/${value.id}`, body),
   );
   const errs = fieldErrors(error);
 
@@ -239,7 +248,7 @@ function DocumentForm({ value, onClose, onSaved }) {
       issueDate: form.issueDate || undefined,
       expiryDate: form.expiryDate || undefined,
     };
-    if (form.employee) body.employee = form.employee;
+    if (form.employee && !selfOnly) body.employee = form.employee;
     try {
       await mutate(body);
       toast.success(isNew ? "Document added" : "Document updated");
@@ -290,13 +299,15 @@ function DocumentForm({ value, onClose, onSaved }) {
             value={form.category}
             onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
           />
-          <Select
-            label="Employee"
-            placeholder="Organisation-level document"
-            options={(employees.data || []).map((emp) => ({ value: emp.id, label: `${emp.firstName} ${emp.lastName}` }))}
-            value={form.employee}
-            onChange={(e) => setForm((f) => ({ ...f, employee: e.target.value }))}
-          />
+          {!selfOnly && (
+            <Select
+              label="Employee"
+              placeholder="Organisation-level document"
+              options={(employees.data || []).map((emp) => ({ value: emp.id, label: `${emp.firstName} ${emp.lastName}` }))}
+              value={form.employee}
+              onChange={(e) => setForm((f) => ({ ...f, employee: e.target.value }))}
+            />
+          )}
           <div />
           <TextField label="Issue date" type="date" value={form.issueDate} onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))} />
           <TextField

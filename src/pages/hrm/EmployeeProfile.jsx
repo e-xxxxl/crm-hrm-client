@@ -12,6 +12,9 @@ import EmployeeForm from "../../components/hrm/EmployeeForm.jsx";
 import AttendanceTab from "../../components/hrm/profileTabs/AttendanceTab.jsx";
 import LeaveTab from "../../components/hrm/profileTabs/LeaveTab.jsx";
 import PayrollTab from "../../components/hrm/profileTabs/PayrollTab.jsx";
+import TargetsTab from "../../components/hrm/profileTabs/TargetsTab.jsx";
+import PerformanceTab from "../../components/hrm/profileTabs/PerformanceTab.jsx";
+import TrainingsTab from "../../components/hrm/profileTabs/TrainingsTab.jsx";
 import Select from "../../components/ui/Select.jsx";
 import TextField from "../../components/ui/TextField.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
@@ -33,13 +36,12 @@ const TABS = [
   { key: "payroll", label: "Payroll" },
   { key: "performance", label: "Performance" },
   { key: "targets", label: "Targets" },
+  { key: "trainings", label: "Trainings attended" },
   { key: "disciplinary", label: "Disciplinary" },
 ];
 
 const PENDING_TAB = {
   documents: "Documents & Contracts",
-  performance: "Performance",
-  targets: "Targets & KPIs",
   disciplinary: "Disciplinary Records",
 };
 
@@ -50,11 +52,14 @@ export default function EmployeeProfile() {
   const session = useAuth((s) => s.session);
   const canWrite = can("employee:write");
   const canDeactivate = can("employee:deactivate");
+  const isSuperAdmin = session?.role === "Super Admin";
 
   const [tab, setTab] = useState("profile");
   const [editing, setEditing] = useState(false);
   const [statusModal, setStatusModal] = useState(false);
   const [loginModal, setLoginModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const deleteAction = useMutation((client, empId) => client.delete(`/hrm/employees/${empId}`));
 
   const { data: employee, loading, error, refetch } = useApiQuery(`/hrm/employees/${id}`);
 
@@ -119,6 +124,11 @@ export default function EmployeeProfile() {
                 {employee.status === "active" ? "Deactivate" : "Reactivate"}
               </Button>
             )}
+            {isSuperAdmin && (
+              <Button variant="danger" onClick={() => setDeleteModal(true)}>
+                Delete
+              </Button>
+            )}
           </>
         }
       />
@@ -154,6 +164,9 @@ export default function EmployeeProfile() {
       {tab === "payroll" && (
         <PayrollTab employee={employee} strategy={session?.organizationStrategy} />
       )}
+      {tab === "targets" && <TargetsTab employee={employee} />}
+      {tab === "performance" && <PerformanceTab employee={employee} />}
+      {tab === "trainings" && <TrainingsTab employee={employee} />}
       {PENDING_TAB[tab] && (
         <EmptyState
           title={`${PENDING_TAB[tab]} not yet available`}
@@ -192,6 +205,51 @@ export default function EmployeeProfile() {
             refetch();
           }}
         />
+      )}
+
+      {deleteModal && (
+        <Modal
+          open
+          onClose={() => setDeleteModal(false)}
+          title="Delete employee permanently"
+          description={`${name} · ${employee.employeeId}`}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setDeleteModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                loading={deleteAction.loading}
+                onClick={async () => {
+                  try {
+                    await deleteAction.mutate(employee.id);
+                    toast.success(`${name} was deleted`);
+                    navigate("/hrm/employees");
+                  } catch (e) {
+                    toast.error(e.message);
+                  }
+                }}
+              >
+                Delete permanently
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm">
+            <p className="font-medium text-red-700">This cannot be undone.</p>
+            <p className="text-ink-600">
+              Deleting {name} permanently removes their employee record along with every attendance log, leave
+              request and balance, salary structure and payslip history, performance review, disciplinary case,
+              document, trip log and notification tied to them. Their platform login is revoked for this
+              organization (and deleted outright if this was their only organization).
+            </p>
+            <p className="text-ink-600">
+              Anything that merely referenced them — as someone else's line manager, reviewer, department head or
+              branch manager — is unlinked, not deleted.
+            </p>
+          </div>
+        </Modal>
       )}
     </>
   );

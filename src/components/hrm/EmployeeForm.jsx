@@ -41,6 +41,7 @@ export default function EmployeeForm({ value = {}, onClose, onSaved }) {
   const managers = useApiQuery("/hrm/employees", { params: { limit: 100, status: "active", sort: "lastName" } });
 
   const [form, setForm] = useState(() => ({
+    employeeId: value.employeeId || "",
     firstName: value.firstName || "",
     middleName: value.middleName || "",
     lastName: value.lastName || "",
@@ -86,6 +87,7 @@ export default function EmployeeForm({ value = {}, onClose, onSaved }) {
 
   function buildBody() {
     const b = {
+      employeeId: form.employeeId || undefined,
       firstName: form.firstName,
       middleName: form.middleName || undefined,
       lastName: form.lastName,
@@ -206,6 +208,14 @@ export default function EmployeeForm({ value = {}, onClose, onSaved }) {
         </Section>
 
         <Section title="Employment">
+          <TextField
+            label="Employee ID"
+            placeholder={isNew ? "Auto-generated if left blank" : undefined}
+            hint={isNew ? undefined : "Must stay unique within the organization"}
+            value={form.employeeId}
+            error={errs.employeeId}
+            onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value.toUpperCase() }))}
+          />
           <TextField label="Position / job title" required value={form.position} error={errs.position} onChange={set("position")} />
           <TextField label="Grade / level" value={form.grade} onChange={set("grade")} />
           <Select label="Department" placeholder="Unassigned" options={deptOptions} value={form.department} onChange={set("department")} />

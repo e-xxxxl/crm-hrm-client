@@ -366,6 +366,9 @@ function LandingRedirect() {
   const canAny = useAuth((s) => s.canAny);
   const role = useAuth((s) => s.session?.role);
   if (role === "Rider") return <Navigate to="/rider" replace />;
+  // Rank-and-file staff land on their own attendance (clock in/out) rather
+  // than the management overview dashboard, which they can't act on anyway.
+  if (role === "Staff") return <Navigate to="/hrm/attendance" replace />;
   const hrm = canAny("employee:read", "attendance:read", "leave:read", "payroll:read", "payroll:read_own", "report:hr");
   const crm = canAny("customer:read", "ticket:read", "shipment:read", "lead:read", "report:crm");
   if (!hrm && crm) return <Navigate to="/crm" replace />;

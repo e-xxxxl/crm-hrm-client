@@ -6,6 +6,8 @@ import TextField from "../../components/ui/TextField.jsx";
 import Alert from "../../components/ui/Alert.jsx";
 import Spinner from "../../components/ui/Spinner.jsx";
 import LeaveTypeManager from "../../components/hrm/LeaveTypeManager.jsx";
+import TrainingManager from "../../components/hrm/TrainingManager.jsx";
+import FileInput from "../../components/ui/FileInput.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
 import { useMutation } from "../../hooks/useMutation.js";
 import { useAuth } from "../../store/auth.js";
@@ -23,26 +25,69 @@ const DAYS = [
 
 export default function HrSettings() {
   const canWrite = useAuth((s) => s.can("settings:write"));
+  const canWriteOrg = useAuth((s) => s.can("org:write"));
+  const canWriteTraining = useAuth((s) => s.can("training:write"));
   const [tab, setTab] = useState("operational");
+
+  const tabs = [
+    { key: "operational", label: "Operational" },
+    { key: "leave", label: "Leave types" },
+    { key: "documents", label: "Document types" },
+    { key: "notifications", label: "Notifications" },
+  ];
+  if (canWriteTraining) tabs.push({ key: "trainings", label: "Trainings" });
+  if (canWriteOrg) tabs.push({ key: "branding", label: "Branding" });
 
   return (
     <>
       <PageHeader title="HR Settings" />
-      <Tabs
-        tabs={[
-          { key: "operational", label: "Operational" },
-          { key: "leave", label: "Leave types" },
-          { key: "documents", label: "Document types" },
-          { key: "notifications", label: "Notifications" },
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
+      <Tabs tabs={tabs} active={tab} onChange={setTab} />
       {tab === "operational" && <OperationalSettings canWrite={canWrite} />}
       {tab === "leave" && <LeaveTypeManager />}
       {tab === "documents" && <DocumentTypes canWrite={canWrite} />}
       {tab === "notifications" && <NotificationSettings canWrite={canWrite} />}
+      {tab === "trainings" && canWriteTraining && <TrainingManager />}
+      {tab === "branding" && canWriteOrg && <BrandingSettings />}
     </>
+  );
+}
+
+function BrandingSettings() {
+  const session = useAuth((s) => s.session);
+  const refreshProfile = useAuth((s) => s.refreshProfile);
+  const save = useMutation((client, body) => client.patch(`/organizations/${session.organizationId}`, body));
+  const [logoUrl, setLogoUrl] = useState(session?.organizationLogoUrl || "");
+
+  async function apply(url) {
+    setLogoUrl(url);
+    try {
+      await save.mutate({ logoUrl: url });
+      toast.success("Logo updated");
+      await refreshProfile();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
+  return (
+    <div className="max-w-md space-y-4">
+      <div>
+        <p className="label">Organization logo</p>
+        <p className="mb-3 text-xs text-ink-500">Shown in the sidebar in place of "CRM + HRM" for everyone in this organization.</p>
+        {logoUrl && (
+          <div className="mb-3 flex h-16 items-center rounded-md border border-ink-200 bg-sidebar px-4">
+            <img src={logoUrl} alt="Organization logo" className="h-10 max-w-[10rem] object-contain" />
+          </div>
+        )}
+        <FileInput
+          label={logoUrl ? "Replace logo" : "Upload logo"}
+          purpose="org-logo"
+          accept=".png,.jpg,.jpeg,.webp"
+          value={logoUrl ? { name: "logo" } : null}
+          onUploaded={(result) => apply(result.url)}
+        />
+      </div>
+    </div>
   );
 }
 

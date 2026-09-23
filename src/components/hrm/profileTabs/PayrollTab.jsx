@@ -64,6 +64,8 @@ export default function PayrollTab({ employee, strategy }) {
               <>
                 <Row label="Base salary" value={money(current.basic)} />
                 <Row label="Per trip" value={money(current.commissionPerTrip)} />
+                {current.exGratia > 0 && <Row label="Ex gratia" value={money(current.exGratia)} />}
+                {current.referralBonus > 0 && <Row label="Referral bonus" value={money(current.referralBonus)} />}
               </>
             )}
             {strategy === "allowance-based" && (
@@ -71,8 +73,10 @@ export default function PayrollTab({ employee, strategy }) {
                 <Row label="Basic" value={money(current.basic)} />
                 <Row label="Housing" value={money(current.housing)} />
                 <Row label="Transport" value={money(current.transport)} />
-                <Row label="Hazard" value={money(current.hazard)} />
-                <Row label="Meal" value={money(current.meal)} />
+                <Row label="Subsidy" value={money(current.subsidy)} />
+                <Row label="Data allowance" value={money(current.dataAllowance)} />
+                {current.exGratia > 0 && <Row label="Ex gratia" value={money(current.exGratia)} />}
+                {current.referralBonus > 0 && <Row label="Referral bonus" value={money(current.referralBonus)} />}
               </>
             )}
             <Row label="PAYE" value={current.payeApplicable ? "Yes" : "No"} />
@@ -90,7 +94,11 @@ export default function PayrollTab({ employee, strategy }) {
             {history.map((h) => (
               <li key={h.id} className="flex items-baseline justify-between gap-3">
                 <span className="text-ink-800">
-                  {money(h.grossMonthly || h.basic + h.housing + h.transport + h.hazard + h.meal)}
+                  {money(
+                    h.grossMonthly ||
+                      h.basic + h.housing + h.transport + (h.subsidy || 0) + (h.dataAllowance || 0) +
+                        (h.exGratia || 0) + (h.referralBonus || 0),
+                  )}
                   {h.reason ? ` — ${h.reason}` : ""}
                 </span>
                 <span className="shrink-0 text-xs text-ink-500">

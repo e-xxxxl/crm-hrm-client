@@ -17,8 +17,10 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
     basic: current?.basic || 0,
     housing: current?.housing || 0,
     transport: current?.transport || 0,
-    hazard: current?.hazard || 0,
-    meal: current?.meal || 0,
+    subsidy: current?.subsidy || 0,
+    dataAllowance: current?.dataAllowance || 0,
+    exGratia: current?.exGratia || 0,
+    referralBonus: current?.referralBonus || 0,
     grossMonthly: current?.grossMonthly || 0,
     commissionPerTrip: current?.commissionPerTrip || 0,
     payeApplicable: current?.payeApplicable ?? true,
@@ -35,7 +37,8 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
   const chk = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }));
 
   const allowanceGross =
-    form.basic + form.housing + form.transport + form.hazard + form.meal;
+    form.basic + form.housing + form.transport + form.subsidy + form.dataAllowance +
+    form.exGratia + form.referralBonus;
   const previewGross =
     strategy === "fixed-monthly" ? form.grossMonthly || allowanceGross : allowanceGross;
 
@@ -97,6 +100,8 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
               value={form.commissionPerTrip}
               onChange={num("commissionPerTrip")}
             />
+            <TextField label="Ex gratia" type="number" min="0" value={form.exGratia} onChange={num("exGratia")} />
+            <TextField label="Referral bonus" type="number" min="0" value={form.referralBonus} onChange={num("referralBonus")} />
           </div>
         )}
 
@@ -105,8 +110,10 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
             <TextField label="Basic (NGN)" type="number" min="0" value={form.basic} onChange={num("basic")} />
             <TextField label="Housing allowance" type="number" min="0" value={form.housing} onChange={num("housing")} />
             <TextField label="Transport allowance" type="number" min="0" value={form.transport} onChange={num("transport")} />
-            <TextField label="Hazard allowance" type="number" min="0" value={form.hazard} onChange={num("hazard")} />
-            <TextField label="Meal allowance" type="number" min="0" value={form.meal} onChange={num("meal")} />
+            <TextField label="Subsidy" type="number" min="0" value={form.subsidy} onChange={num("subsidy")} />
+            <TextField label="Data allowance" type="number" min="0" value={form.dataAllowance} onChange={num("dataAllowance")} />
+            <TextField label="Ex gratia" type="number" min="0" value={form.exGratia} onChange={num("exGratia")} />
+            <TextField label="Referral bonus" type="number" min="0" value={form.referralBonus} onChange={num("referralBonus")} />
           </div>
         )}
 

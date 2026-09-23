@@ -5,6 +5,7 @@ import Select from "../ui/Select.jsx";
 import TextField from "../ui/TextField.jsx";
 import Textarea from "../ui/Textarea.jsx";
 import Alert from "../ui/Alert.jsx";
+import FileInput from "../ui/FileInput.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
 import { useMutation, fieldErrors } from "../../hooks/useMutation.js";
 import { toast } from "../../store/toast.js";
@@ -42,6 +43,7 @@ export default function LeaveRequestForm({ onBehalf = false, onClose, onSaved })
     halfDayEnd: false,
     reason: "",
     supportingDocumentUrl: "",
+    supportingDocumentName: "",
     contactWhileAway: "",
   });
 
@@ -194,14 +196,23 @@ export default function LeaveRequestForm({ onBehalf = false, onClose, onSaved })
         />
 
         {showDocumentField && (
-          <TextField
-            label="Supporting document URL"
-            hint="Optional"
-            placeholder="Link to uploaded document"
-            value={form.supportingDocumentUrl}
-            error={errs.supportingDocumentUrl}
-            onChange={set("supportingDocumentUrl")}
-          />
+          <div className="space-y-2">
+            <FileInput
+              label="Supporting document (optional)"
+              purpose="leave-document"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              value={form.supportingDocumentUrl ? { name: form.supportingDocumentName } : null}
+              onUploaded={(result, file) =>
+                setForm((f) => ({ ...f, supportingDocumentUrl: result.url, supportingDocumentName: result.originalName || file.name }))
+              }
+            />
+            <TextField
+              placeholder="Or paste a link to the document instead"
+              value={form.supportingDocumentUrl}
+              error={errs.supportingDocumentUrl}
+              onChange={set("supportingDocumentUrl")}
+            />
+          </div>
         )}
 
         <TextField

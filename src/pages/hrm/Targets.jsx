@@ -277,7 +277,7 @@ function TargetForm({ onClose, onSaved }) {
   );
 }
 
-function TargetDetail({ id, onClose, onChanged }) {
+export function TargetDetail({ id, onClose, onChanged }) {
   const { data: t, loading, error, refetch } = useApiQuery(`/hrm/targets/${id}`);
   const can = useAuth((s) => s.can);
   const [value, setValue] = useState("");

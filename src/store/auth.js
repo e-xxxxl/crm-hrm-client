@@ -17,7 +17,12 @@ export const useAuth = create((set, get) => ({
   pending2fa: null, // { organizationId } when a TOTP code is required
 
   async bootstrap() {
-    try {
+    // A page reload always starts here (no in-memory access token survives it),
+    // relying on the httpOnly refresh cookie. A genuine 401/403 means the
+    // cookie is missing/expired — that's a real logout. Anything else (a
+    // network blip, a cold-starting API, a timeout) gets a couple of quick
+    // retries first, so a single transient failure doesn't sign the user out.
+    const attempt = async () => {
       const { data } = await api.post("/auth/refresh");
       setAccessToken(data.data.accessToken);
       const me = await api.get("/auth/me");
@@ -26,8 +31,24 @@ export const useAuth = create((set, get) => ({
         user: me.data.data.user,
         session: me.data.data.session,
       });
-    } catch {
-      set({ status: "anonymous", user: null, session: null });
+    };
+
+    let lastErr;
+    for (let i = 0; i < 3; i++) {
+      try {
+        await attempt();
+        return;
+      } catch (err) {
+        lastErr = err;
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) break; // real logout — no point retrying
+        if (i < 2) await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+      }
+    }
+    set({ status: "anonymous", user: null, session: null });
+    if (lastErr && lastErr?.response?.status !== 401 && lastErr?.response?.status !== 403) {
+      // eslint-disable-next-line no-console
+      console.warn("Session restore failed after retries:", lastErr);
     }
   },
 
@@ -72,6 +93,17 @@ export const useAuth = create((set, get) => ({
       }
       throw err;
     }
+  },
+
+  /** In-app org switch (Super Admin / Group Admin etc. with multiple memberships) — no logout needed. */
+  async switchOrg(organizationId) {
+    const { data } = await api.post("/auth/switch-org", { organizationId });
+    setAccessToken(data.data.accessToken);
+    set({
+      status: "authenticated",
+      user: data.data.user,
+      session: data.data.session,
+    });
   },
 
   async logout() {

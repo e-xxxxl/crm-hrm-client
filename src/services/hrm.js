@@ -23,6 +23,7 @@ export const employees = {
     api.patch(`/hrm/employees/${id}/status`, { status, reason }).then((r) => r.data.data),
   provisionLogin: (id, body) =>
     api.post(`/hrm/employees/${id}/login`, body).then((r) => ({ userId: r.data.data.userId, email: r.data.data.email, tempPassword: r.data.meta?.tempPassword ?? null })),
+  remove: (id) => api.delete(`/hrm/employees/${id}`).then((r) => r.data.data),
 };
 
 export const departments = {

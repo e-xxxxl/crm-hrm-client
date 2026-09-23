@@ -67,15 +67,29 @@ api.interceptors.request.use((config) => {
 });
 
 async function runRefresh() {
-  const { data } = await axios.post(
-    `${api.defaults.baseURL}/auth/refresh`,
-    {},
-    { withCredentials: true },
-  );
-  const next = data?.data?.accessToken;
-  if (!next) throw new Error("No access token in refresh response");
-  setAccessToken(next);
-  return next;
+  // A single transient failure here (network blip, cold-starting API) should
+  // not sign the user out — only a real 401/403 (refresh token actually
+  // invalid/expired) should. Retry a couple of times first.
+  let lastErr;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const { data } = await axios.post(
+        `${api.defaults.baseURL}/auth/refresh`,
+        {},
+        { withCredentials: true },
+      );
+      const next = data?.data?.accessToken;
+      if (!next) throw new Error("No access token in refresh response");
+      setAccessToken(next);
+      return next;
+    } catch (err) {
+      lastErr = err;
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) throw err;
+      if (i < 2) await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+    }
+  }
+  throw lastErr;
 }
 
 api.interceptors.response.use(
