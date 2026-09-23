@@ -5,6 +5,13 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Default brand accent (RGB triples, no commas — Tailwind's alpha-value
+       syntax) — the original blue. Overridden per-org at runtime by
+       src/utils/brandTheme.js once a session with an organization is loaded. */
+    --brand-600: 29 78 216;
+    --brand-700: 30 64 175;
+    --brand-900: 15 23 42;
+    --brand-800: 30 41 59;
   }
   body {
     @apply bg-ink-100 text-ink-900 font-sans antialiased;

@@ -21,6 +21,7 @@ function monthBounds(offset = 0) {
 
 const CATEGORY_TONE = {
   annual: "blue",
+  casual: "amber",
   sick: "amber",
   maternity: "green",
   paternity: "green",

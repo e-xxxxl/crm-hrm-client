@@ -49,6 +49,8 @@ export default function LeaveRequestForm({ onBehalf = false, onClose, onSaved })
     () => (types.data || []).find((t) => t.id === form.leaveType),
     [types.data, form.leaveType],
   );
+  // Only maternity/sick leave can carry a supporting document, and it's always optional.
+  const showDocumentField = selectedType?.category === "maternity" || selectedType?.category === "sick";
 
   const { mutate, loading, error } = useMutation((client, body) =>
     client.post("/hrm/leave/requests", body),
@@ -136,9 +138,9 @@ export default function LeaveRequestForm({ onBehalf = false, onClose, onSaved })
         />
         {selectedType && (
           <p className="-mt-2 text-xs text-ink-500">
-            {selectedType.defaultDaysPerYear} days/year ·{" "}
-            {selectedType.minNoticeDays > 0 ? `${selectedType.minNoticeDays} days notice · ` : ""}
-            {selectedType.requiresDocument ? "supporting document required" : "no document required"}
+            {selectedType.defaultDaysPerYear} days/year
+            {selectedType.minNoticeDays > 0 ? ` · ${selectedType.minNoticeDays} days notice` : ""}
+            {showDocumentField ? " · supporting document optional" : ""}
           </p>
         )}
 
@@ -191,10 +193,10 @@ export default function LeaveRequestForm({ onBehalf = false, onClose, onSaved })
           onChange={set("reason")}
         />
 
-        {selectedType?.requiresDocument && (
+        {showDocumentField && (
           <TextField
             label="Supporting document URL"
-            required={!onBehalf}
+            hint="Optional"
             placeholder="Link to uploaded document"
             value={form.supportingDocumentUrl}
             error={errs.supportingDocumentUrl}

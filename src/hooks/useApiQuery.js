@@ -7,7 +7,7 @@ import { api, normaliseError } from "../services/api.js";
  * Pass `skip` to defer the request.
  */
 export function useApiQuery(path, { params, skip = false, deps = [] } = {}) {
-  const [state, setState] = useState({ data: null, meta: null, loading: !skip, error: null });
+  const [state, setState] = useState({ data: null, meta: null, raw: null, loading: !skip, error: null });
   const reqId = useRef(0);
   const paramsKey = JSON.stringify(params ?? {});
 
@@ -18,7 +18,10 @@ export function useApiQuery(path, { params, skip = false, deps = [] } = {}) {
     try {
       const res = await api.get(path, { params });
       if (id !== reqId.current) return;
-      setState({ data: res.data.data ?? res.data, meta: res.data.meta ?? null, loading: false, error: null });
+      // `raw` is the untouched response body — for endpoints that return extra
+      // sibling fields alongside `data`/`meta` (e.g. attendance/today's
+      // `summary`), read those off `raw` rather than guessing at `data`'s shape.
+      setState({ data: res.data.data ?? res.data, meta: res.data.meta ?? null, raw: res.data, loading: false, error: null });
     } catch (err) {
       if (id !== reqId.current) return;
       setState({ data: null, meta: null, loading: false, error: normaliseError(err) });

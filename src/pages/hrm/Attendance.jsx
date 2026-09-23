@@ -104,7 +104,7 @@ function DailyRegister() {
 
   return (
     <>
-      <StatTiles summary={list.data?.summary} />
+      <StatTiles summary={list.raw?.summary} />
 
       <FilterBar
         active={filters.branch || filters.department || filters.status || filters.search || filters.date !== todayKey()}
@@ -145,7 +145,7 @@ function DailyRegister() {
         loading={list.loading}
         error={list.error}
         onRetry={list.refetch}
-        rows={list.data?.data || []}
+        rows={list.data || []}
         keyField="id"
         empty={{ title: "No employees", description: "No active employees match these filters." }}
         columns={[
@@ -220,7 +220,7 @@ function DailyRegister() {
             render: (r) => <Badge status={r.status}>{r.status}</Badge>,
           },
         ]}
-        footer={<Pagination meta={list.data?.meta} onPage={setPage} />}
+        footer={<Pagination meta={list.meta} onPage={setPage} />}
       />
     </>
   );

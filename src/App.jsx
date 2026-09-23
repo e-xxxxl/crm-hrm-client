@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./store/auth.js";
+import { applyBrandTheme } from "./utils/brandTheme.js";
 import Toaster from "./components/ui/Toaster.jsx";
 import Spinner from "./components/ui/Spinner.jsx";
 import RequireAuth from "./components/guards/RequireAuth.jsx";
@@ -57,10 +58,15 @@ import Notifications from "./pages/hrm/Notifications.jsx";
 
 export default function App() {
   const { status, bootstrap } = useAuth();
+  const organizationType = useAuth((s) => s.session?.organizationType);
 
   useEffect(() => {
     bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    applyBrandTheme(organizationType);
+  }, [organizationType]);
 
   if (status === "loading") {
     return (

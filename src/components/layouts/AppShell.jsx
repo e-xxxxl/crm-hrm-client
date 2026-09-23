@@ -36,6 +36,7 @@ export default function AppShell({ nav, sectionLabel }) {
               sectionLabel={sectionLabel}
               orgName={session?.organizationName}
               onNavigate={() => setMobileOpen(false)}
+              workspaceCurrent={sectionLabel === "CRM" ? "crm" : "hrm"}
             />
           </div>
         </div>
@@ -59,7 +60,7 @@ export default function AppShell({ nav, sectionLabel }) {
             <p className="truncate text-2xs text-ink-500">{session?.role} · {sectionLabel}</p>
           </div>
 
-          <WorkspaceSwitcher current={sectionLabel === "CRM" ? "crm" : "hrm"} />
+          <WorkspaceSwitcher current={sectionLabel === "CRM" ? "crm" : "hrm"} className="hidden sm:flex" />
           <NotificationBell />
           <UserMenu name={user?.name} email={user?.email} role={session?.role} avatar={initials(user?.name)} />
         </header>
@@ -72,7 +73,7 @@ export default function AppShell({ nav, sectionLabel }) {
   );
 }
 
-function SidebarContent({ nav, sectionLabel, orgName, onNavigate }) {
+function SidebarContent({ nav, sectionLabel, orgName, onNavigate, workspaceCurrent }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center border-b border-sidebar-border px-5">
@@ -83,6 +84,13 @@ function SidebarContent({ nav, sectionLabel, orgName, onNavigate }) {
         <p className="text-2xs uppercase tracking-wide text-ink-500">Organization</p>
         <p className="mt-0.5 truncate text-sm font-medium text-ink-100">{orgName || "—"}</p>
       </div>
+
+      {workspaceCurrent && (
+        <div className="border-b border-sidebar-border px-5 py-3 lg:hidden">
+          <p className="mb-1.5 text-2xs uppercase tracking-wide text-ink-500">Workspace</p>
+          <WorkspaceSwitcher current={workspaceCurrent} variant="dark" onNavigate={onNavigate} />
+        </div>
+      )}
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         <p className="px-2 pb-1 pt-2 text-2xs font-medium uppercase tracking-wider text-ink-500">

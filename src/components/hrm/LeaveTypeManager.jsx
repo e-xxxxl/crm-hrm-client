@@ -12,7 +12,7 @@ import { useMutation, fieldErrors } from "../../hooks/useMutation.js";
 import { toast } from "../../store/toast.js";
 import { days as fmtDays } from "../../utils/format.js";
 
-const CATEGORIES = ["annual", "sick", "maternity", "paternity", "compassionate", "unpaid", "other"];
+const CATEGORIES = ["annual", "casual", "sick", "maternity", "paternity", "compassionate", "unpaid", "other"];
 
 export default function LeaveTypeManager() {
   const list = useApiQuery("/hrm/leave/types", { params: {} });

@@ -4,12 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Dark sidebar / shell
+        // Dark sidebar / shell — its whole background, hover and active-item
+        // highlight all track the org's brand color. See the `brand` entry
+        // below and src/utils/brandTheme.js.
         sidebar: {
-          DEFAULT: "#0f172a",
-          hover: "#1e293b",
-          active: "#334155",
-          border: "#1e293b",
+          DEFAULT: "rgb(var(--brand-900) / <alpha-value>)",
+          hover: "rgb(var(--brand-800) / <alpha-value>)",
+          active: "rgb(var(--brand-600) / <alpha-value>)",
+          border: "rgb(var(--brand-800) / <alpha-value>)",
         },
         // Neutral content surfaces
         ink: {
@@ -21,9 +23,12 @@ export default {
           100: "#f1f5f9",
           50: "#f8fafc",
         },
+        // Per-organization accent, swapped at runtime via CSS variables — see
+        // src/utils/brandTheme.js. Defaults (set in index.css) match the old
+        // static blue so the app looks right before a session is loaded.
         brand: {
-          600: "#1d4ed8",
-          700: "#1e40af",
+          600: "rgb(var(--brand-600) / <alpha-value>)",
+          700: "rgb(var(--brand-700) / <alpha-value>)",
         },
       },
       fontFamily: {
