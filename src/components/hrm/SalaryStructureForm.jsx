@@ -12,17 +12,31 @@ import { money } from "../../utils/format.js";
  * Set an employee's salary structure. Fields shown depend on the organization's
  * payroll strategy.
  */
+// Numeric fields are kept as raw strings in form state — coercing to Number
+// on every keystroke (the old behaviour) snaps a controlled input's display
+// back to an integer the instant a decimal point is typed, since the state
+// immediately loses the trailing ".", making decimals impossible to enter.
+const MONEY_FIELDS = [
+  "basic", "housing", "transport", "subsidy", "dataAllowance",
+  "exGratia", "referralBonus", "overtime", "grossMonthly", "commissionPerTrip",
+];
+const toNum = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
 export default function SalaryStructureForm({ employeeId, strategy, current, onClose, onSaved }) {
   const [form, setForm] = useState({
-    basic: current?.basic || 0,
-    housing: current?.housing || 0,
-    transport: current?.transport || 0,
-    subsidy: current?.subsidy || 0,
-    dataAllowance: current?.dataAllowance || 0,
-    exGratia: current?.exGratia || 0,
-    referralBonus: current?.referralBonus || 0,
-    grossMonthly: current?.grossMonthly || 0,
-    commissionPerTrip: current?.commissionPerTrip || 0,
+    basic: String(current?.basic ?? 0),
+    housing: String(current?.housing ?? 0),
+    transport: String(current?.transport ?? 0),
+    subsidy: String(current?.subsidy ?? 0),
+    dataAllowance: String(current?.dataAllowance ?? 0),
+    exGratia: String(current?.exGratia ?? 0),
+    referralBonus: String(current?.referralBonus ?? 0),
+    overtime: String(current?.overtime ?? 0),
+    grossMonthly: String(current?.grossMonthly ?? 0),
+    commissionPerTrip: String(current?.commissionPerTrip ?? 0),
     payeApplicable: current?.payeApplicable ?? true,
     pensionApplicable: current?.pensionApplicable ?? true,
     nhfApplicable: current?.nhfApplicable ?? false,
@@ -33,19 +47,21 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
     client.put(`/hrm/payroll/structures/${employeeId}`, body),
   );
 
-  const num = (k) => (e) => setForm((f) => ({ ...f, [k]: Number(e.target.value) }));
+  const num = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const chk = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }));
 
   const allowanceGross =
-    form.basic + form.housing + form.transport + form.subsidy + form.dataAllowance +
-    form.exGratia + form.referralBonus;
+    toNum(form.basic) + toNum(form.housing) + toNum(form.transport) + toNum(form.subsidy) +
+    toNum(form.dataAllowance) + toNum(form.exGratia) + toNum(form.referralBonus) + toNum(form.overtime);
   const previewGross =
-    strategy === "fixed-monthly" ? form.grossMonthly || allowanceGross : allowanceGross;
+    strategy === "fixed-monthly" ? toNum(form.grossMonthly) || allowanceGross : allowanceGross;
 
   async function submit(e) {
     e.preventDefault();
+    const body = { ...form };
+    for (const f of MONEY_FIELDS) body[f] = toNum(form[f]);
     try {
-      await mutate(form);
+      await mutate(body);
       toast.success("Salary structure updated");
       onSaved();
     } catch {
@@ -85,6 +101,7 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
             label="Gross monthly salary (NGN)"
             type="number"
             min="0"
+            step="0.01"
             value={form.grossMonthly}
             onChange={num("grossMonthly")}
           />
@@ -92,28 +109,31 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
 
         {strategy === "hybrid" && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Base salary (NGN)" type="number" min="0" value={form.basic} onChange={num("basic")} />
+            <TextField label="Base salary (NGN)" type="number" min="0" step="0.01" value={form.basic} onChange={num("basic")} />
             <TextField
               label="Commission per trip (NGN)"
               type="number"
               min="0"
+              step="0.01"
               value={form.commissionPerTrip}
               onChange={num("commissionPerTrip")}
             />
-            <TextField label="Ex gratia" type="number" min="0" value={form.exGratia} onChange={num("exGratia")} />
-            <TextField label="Referral bonus" type="number" min="0" value={form.referralBonus} onChange={num("referralBonus")} />
+            <TextField label="Ex gratia" type="number" min="0" step="0.01" value={form.exGratia} onChange={num("exGratia")} />
+            <TextField label="Referral bonus" type="number" min="0" step="0.01" value={form.referralBonus} onChange={num("referralBonus")} />
+            <TextField label="Overtime" type="number" min="0" step="0.01" hint="Not taxed" value={form.overtime} onChange={num("overtime")} />
           </div>
         )}
 
         {strategy === "allowance-based" && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Basic (NGN)" type="number" min="0" value={form.basic} onChange={num("basic")} />
-            <TextField label="Housing allowance" type="number" min="0" value={form.housing} onChange={num("housing")} />
-            <TextField label="Transport allowance" type="number" min="0" value={form.transport} onChange={num("transport")} />
-            <TextField label="Subsidy" type="number" min="0" value={form.subsidy} onChange={num("subsidy")} />
-            <TextField label="Data allowance" type="number" min="0" value={form.dataAllowance} onChange={num("dataAllowance")} />
-            <TextField label="Ex gratia" type="number" min="0" value={form.exGratia} onChange={num("exGratia")} />
-            <TextField label="Referral bonus" type="number" min="0" value={form.referralBonus} onChange={num("referralBonus")} />
+            <TextField label="Basic (NGN)" type="number" min="0" step="0.01" value={form.basic} onChange={num("basic")} />
+            <TextField label="Housing allowance" type="number" min="0" step="0.01" value={form.housing} onChange={num("housing")} />
+            <TextField label="Transport allowance" type="number" min="0" step="0.01" value={form.transport} onChange={num("transport")} />
+            <TextField label="Subsidy" type="number" min="0" step="0.01" value={form.subsidy} onChange={num("subsidy")} />
+            <TextField label="Data allowance" type="number" min="0" step="0.01" value={form.dataAllowance} onChange={num("dataAllowance")} />
+            <TextField label="Ex gratia" type="number" min="0" step="0.01" value={form.exGratia} onChange={num("exGratia")} />
+            <TextField label="Referral bonus" type="number" min="0" step="0.01" value={form.referralBonus} onChange={num("referralBonus")} />
+            <TextField label="Overtime" type="number" min="0" step="0.01" hint="Not taxed" value={form.overtime} onChange={num("overtime")} />
           </div>
         )}
 

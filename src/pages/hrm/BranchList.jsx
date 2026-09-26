@@ -258,10 +258,13 @@ function BranchForm({ value, onClose, onSaved }) {
 
 function BranchDetail({ id, canWrite, onClose, onChanged, onEdit }) {
   const { data, loading, error, refetch } = useApiQuery(`/hrm/branches/${id}`);
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const branch = data?.branch;
   const { mutate, loading: saving } = useMutation((client, status) =>
     client.patch(`/hrm/branches/${id}/status`, { status }),
   );
+  const removeM = useMutation((client) => client.delete(`/hrm/branches/${id}`));
 
   async function toggleStatus() {
     const next = branch.status === "active" ? "inactive" : "active";
@@ -275,6 +278,18 @@ function BranchDetail({ id, canWrite, onClose, onChanged, onEdit }) {
     }
   }
 
+  async function handleDelete() {
+    if (!confirm(`Delete branch "${branch.name}"? This only works if no employee (past or present) is assigned to it.`)) return;
+    try {
+      await removeM.mutate();
+      toast.success("Branch deleted");
+      onChanged();
+      onClose();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   return (
     <Drawer
       open
@@ -282,19 +297,27 @@ function BranchDetail({ id, canWrite, onClose, onChanged, onEdit }) {
       title={branch?.name || "Branch"}
       description={[branch?.lga, branch?.state].filter(Boolean).join(", ")}
       footer={
-        canWrite &&
         branch && (
           <>
-            <Button variant="secondary" onClick={() => onEdit(branch)}>
-              Edit
-            </Button>
-            <Button
-              variant={branch.status === "active" ? "danger" : "primary"}
-              loading={saving}
-              onClick={toggleStatus}
-            >
-              {branch.status === "active" ? "Deactivate" : "Activate"}
-            </Button>
+            {canWrite && (
+              <Button variant="secondary" onClick={() => onEdit(branch)}>
+                Edit
+              </Button>
+            )}
+            {canWrite && (
+              <Button
+                variant={branch.status === "active" ? "danger" : "primary"}
+                loading={saving}
+                onClick={toggleStatus}
+              >
+                {branch.status === "active" ? "Deactivate" : "Activate"}
+              </Button>
+            )}
+            {canDelete && (
+              <Button variant="danger" loading={removeM.loading} onClick={handleDelete}>
+                Delete
+              </Button>
+            )}
           </>
         )
       }

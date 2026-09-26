@@ -107,7 +107,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<HrOverview />} />
+          <Route index element={<HrIndex />} />
           <Route
             path="employees"
             element={
@@ -373,4 +373,19 @@ function LandingRedirect() {
   const crm = canAny("customer:read", "ticket:read", "shipment:read", "lead:read", "report:crm");
   if (!hrm && crm) return <Navigate to="/crm" replace />;
   return <Navigate to="/hrm" replace />;
+}
+
+/**
+ * The `/hrm` index route itself — not just the initial "/" redirect — needs
+ * this same role check. Anyone can land here directly (bookmark, the HRM/CRM
+ * WorkspaceSwitcher button, browser back/forward), and HrOverview's data
+ * comes from an endpoint gated to employee:read/report:hr, which rank-and-
+ * file roles (Staff, Rider) don't hold — they'd otherwise hit a permanent
+ * "Could not load the overview" error instead of their own attendance page.
+ */
+function HrIndex() {
+  const canOverview = useAuth((s) => s.canAny("employee:read", "report:hr"));
+  const canAttendance = useAuth((s) => s.can("attendance:read"));
+  if (!canOverview && canAttendance) return <Navigate to="/hrm/attendance" replace />;
+  return <HrOverview />;
 }

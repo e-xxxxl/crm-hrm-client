@@ -24,6 +24,10 @@ export const employees = {
   provisionLogin: (id, body) =>
     api.post(`/hrm/employees/${id}/login`, body).then((r) => ({ userId: r.data.data.userId, email: r.data.data.email, tempPassword: r.data.meta?.tempPassword ?? null })),
   remove: (id) => api.delete(`/hrm/employees/${id}`).then((r) => r.data.data),
+  getLogin: (id) => api.get(`/hrm/employees/${id}/login`).then((r) => r.data.data),
+  updateLogin: (id, body) => api.patch(`/hrm/employees/${id}/login`, body).then((r) => r.data.data),
+  resetLoginPassword: (id, password) =>
+    api.post(`/hrm/employees/${id}/login/reset-password`, { password: password || undefined }).then((r) => r.data.data.tempPassword),
 };
 
 export const departments = {

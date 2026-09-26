@@ -280,10 +280,13 @@ function TargetForm({ onClose, onSaved }) {
 export function TargetDetail({ id, onClose, onChanged }) {
   const { data: t, loading, error, refetch } = useApiQuery(`/hrm/targets/${id}`);
   const can = useAuth((s) => s.can);
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const [value, setValue] = useState("");
   const [note, setNote] = useState("");
   const progress = useMutation((client, body) => client.post(`/hrm/targets/${id}/progress`, body));
   const cancelM = useMutation((client) => client.patch(`/hrm/targets/${id}`, { status: "cancelled" }));
+  const removeM = useMutation((client) => client.delete(`/hrm/targets/${id}`));
 
   async function addProgress() {
     if (value === "") return;
@@ -386,6 +389,28 @@ export function TargetDetail({ id, onClose, onChanged }) {
                 }}
               >
                 Cancel target
+              </Button>
+            </div>
+          )}
+
+          {canDelete && (
+            <div className="border-t border-ink-200 pt-3">
+              <Button
+                variant="danger"
+                loading={removeM.loading}
+                onClick={async () => {
+                  if (!confirm(`Delete target "${t.title}"? This cannot be undone.`)) return;
+                  try {
+                    await removeM.mutate();
+                    toast.success("Target deleted");
+                    onChanged();
+                    onClose();
+                  } catch (e) {
+                    toast.error(e.message);
+                  }
+                }}
+              >
+                Delete target
               </Button>
             </div>
           )}

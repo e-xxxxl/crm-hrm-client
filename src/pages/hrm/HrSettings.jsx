@@ -27,6 +27,10 @@ export default function HrSettings() {
   const canWrite = useAuth((s) => s.can("settings:write"));
   const canWriteOrg = useAuth((s) => s.can("org:write"));
   const canWriteTraining = useAuth((s) => s.can("training:write"));
+  const session = useAuth((s) => s.session);
+  // HR Manager can't create a new catalog entry (see TrainingManager) but can
+  // still see the tab to edit/deactivate/delete existing ones.
+  const canSeeTrainingTab = canWriteTraining || session?.role === "HR Manager";
   const [tab, setTab] = useState("operational");
 
   const tabs = [
@@ -35,7 +39,7 @@ export default function HrSettings() {
     { key: "documents", label: "Document types" },
     { key: "notifications", label: "Notifications" },
   ];
-  if (canWriteTraining) tabs.push({ key: "trainings", label: "Trainings" });
+  if (canSeeTrainingTab) tabs.push({ key: "trainings", label: "Trainings" });
   if (canWriteOrg) tabs.push({ key: "branding", label: "Branding" });
 
   return (
@@ -46,7 +50,7 @@ export default function HrSettings() {
       {tab === "leave" && <LeaveTypeManager />}
       {tab === "documents" && <DocumentTypes canWrite={canWrite} />}
       {tab === "notifications" && <NotificationSettings canWrite={canWrite} />}
-      {tab === "trainings" && canWriteTraining && <TrainingManager />}
+      {tab === "trainings" && canSeeTrainingTab && <TrainingManager />}
       {tab === "branding" && canWriteOrg && <BrandingSettings />}
     </>
   );

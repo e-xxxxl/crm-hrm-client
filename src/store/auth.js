@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, setAccessToken, onAuthExpired } from "../services/api.js";
+import { api, setAccessToken, onAuthExpired, refreshAccessToken } from "../services/api.js";
 
 /**
  * Global auth/session state.
@@ -21,34 +21,30 @@ export const useAuth = create((set, get) => ({
     // relying on the httpOnly refresh cookie. A genuine 401/403 means the
     // cookie is missing/expired — that's a real logout. Anything else (a
     // network blip, a cold-starting API, a timeout) gets a couple of quick
-    // retries first, so a single transient failure doesn't sign the user out.
-    const attempt = async () => {
-      const { data } = await api.post("/auth/refresh");
-      setAccessToken(data.data.accessToken);
+    // retries first (inside refreshAccessToken), so a single transient
+    // failure doesn't sign the user out.
+    //
+    // This goes through the same single-flight refreshAccessToken() the 401
+    // interceptor uses, rather than posting /auth/refresh directly — the
+    // refresh token rotates on every use, so if this ran its own independent
+    // call, it could race a concurrent refresh (e.g. React StrictMode
+    // double-invoking this effect on mount) and get signed out for
+    // presenting an already-rotated cookie.
+    try {
+      await refreshAccessToken();
       const me = await api.get("/auth/me");
       set({
         status: "authenticated",
         user: me.data.data.user,
         session: me.data.data.session,
       });
-    };
-
-    let lastErr;
-    for (let i = 0; i < 3; i++) {
-      try {
-        await attempt();
-        return;
-      } catch (err) {
-        lastErr = err;
-        const status = err?.response?.status;
-        if (status === 401 || status === 403) break; // real logout — no point retrying
-        if (i < 2) await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+    } catch (err) {
+      set({ status: "anonymous", user: null, session: null });
+      const status = err?.response?.status;
+      if (status !== 401 && status !== 403) {
+        // eslint-disable-next-line no-console
+        console.warn("Session restore failed after retries:", err);
       }
-    }
-    set({ status: "anonymous", user: null, session: null });
-    if (lastErr && lastErr?.response?.status !== 401 && lastErr?.response?.status !== 403) {
-      // eslint-disable-next-line no-console
-      console.warn("Session restore failed after retries:", lastErr);
     }
   },
 

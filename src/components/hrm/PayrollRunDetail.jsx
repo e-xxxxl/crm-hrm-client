@@ -91,7 +91,8 @@ export default function PayrollRunDetail({ id, onClose, onChanged }) {
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-ink-200 bg-ink-200 sm:grid-cols-3 lg:grid-cols-6">
             <Tile label="Employees" value={run.totals.employeeCount} />
             <Tile label="Gross" value={money(run.totals.grossEarnings, { whole: true })} />
-            <Tile label="PAYE" value={money(run.totals.paye, { whole: true })} />
+            <Tile label="PAYE (employee)" value={money(run.totals.paye, { whole: true })} />
+            <Tile label="PAYE (company)" value={money(run.totals.payeEmployer, { whole: true })} />
             <Tile label="Pension (emp)" value={money(run.totals.pensionEmployee, { whole: true })} />
             <Tile label="Deductions" value={money(run.totals.totalDeductions, { whole: true })} />
             <Tile label="Net pay" value={money(run.totals.netPay, { whole: true })} />

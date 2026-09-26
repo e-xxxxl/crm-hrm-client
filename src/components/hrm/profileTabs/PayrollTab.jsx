@@ -7,15 +7,23 @@ import Spinner from "../../ui/Spinner.jsx";
 import SalaryStructureForm from "../SalaryStructureForm.jsx";
 import PayslipView from "../PayslipView.jsx";
 import { useApiQuery } from "../../../hooks/useApiQuery.js";
+import { useMutation } from "../../../hooks/useMutation.js";
 import { useAuth } from "../../../store/auth.js";
+import { toast } from "../../../store/toast.js";
 import { money, dateShort } from "../../../utils/format.js";
 
 export default function PayrollTab({ employee, strategy }) {
   const can = useAuth((s) => s.can);
+  const session = useAuth((s) => s.session);
   const canView = can("payroll:read");
   const canConfigure = can("payroll:configure");
+  // Deleting a salary structure record is restricted to exactly these three roles.
+  const canDeleteStructure = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const [editing, setEditing] = useState(false);
   const [payslipId, setPayslipId] = useState(null);
+  const removeStructure = useMutation((client, structureId) =>
+    client.delete(`/hrm/payroll/structures/${employee.id}/${structureId}`),
+  );
 
   const structure = useApiQuery(`/hrm/payroll/structures/${employee.id}`, { skip: !canView });
   const payslips = useApiQuery("/hrm/payroll/payslips", {
@@ -43,16 +51,39 @@ export default function PayrollTab({ employee, strategy }) {
   const current = structure.data?.current;
   const history = structure.data?.history || [];
 
+  async function handleDelete(structureId, label) {
+    if (!confirm(`Delete this salary structure record (${label})? This cannot be undone.`)) return;
+    try {
+      await removeStructure.mutate(structureId);
+      toast.success("Salary structure deleted");
+      structure.refetch();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="card p-4">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-ink-900">Current salary structure</h3>
-          {canConfigure && (
-            <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-              {current ? "Update" : "Set structure"}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {canConfigure && (
+              <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+                {current ? "Update" : "Set structure"}
+              </Button>
+            )}
+            {canDeleteStructure && current && (
+              <Button
+                size="sm"
+                variant="danger"
+                loading={removeStructure.loading}
+                onClick={() => handleDelete(current.id, "current")}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
         </div>
 
         {!current ? (
@@ -66,6 +97,7 @@ export default function PayrollTab({ employee, strategy }) {
                 <Row label="Per trip" value={money(current.commissionPerTrip)} />
                 {current.exGratia > 0 && <Row label="Ex gratia" value={money(current.exGratia)} />}
                 {current.referralBonus > 0 && <Row label="Referral bonus" value={money(current.referralBonus)} />}
+                {current.overtime > 0 && <Row label="Overtime" value={money(current.overtime)} />}
               </>
             )}
             {strategy === "allowance-based" && (
@@ -77,6 +109,7 @@ export default function PayrollTab({ employee, strategy }) {
                 <Row label="Data allowance" value={money(current.dataAllowance)} />
                 {current.exGratia > 0 && <Row label="Ex gratia" value={money(current.exGratia)} />}
                 {current.referralBonus > 0 && <Row label="Referral bonus" value={money(current.referralBonus)} />}
+                {current.overtime > 0 && <Row label="Overtime" value={money(current.overtime)} />}
               </>
             )}
             <Row label="PAYE" value={current.payeApplicable ? "Yes" : "No"} />
@@ -97,12 +130,21 @@ export default function PayrollTab({ employee, strategy }) {
                   {money(
                     h.grossMonthly ||
                       h.basic + h.housing + h.transport + (h.subsidy || 0) + (h.dataAllowance || 0) +
-                        (h.exGratia || 0) + (h.referralBonus || 0),
+                        (h.exGratia || 0) + (h.referralBonus || 0) + (h.overtime || 0),
                   )}
                   {h.reason ? ` — ${h.reason}` : ""}
                 </span>
-                <span className="shrink-0 text-xs text-ink-500">
+                <span className="flex shrink-0 items-center gap-2 text-xs text-ink-500">
                   {dateShort(h.effectiveFrom)} – {h.effectiveTo ? dateShort(h.effectiveTo) : "present"}
+                  {canDeleteStructure && h.id !== current?.id && (
+                    <button
+                      type="button"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => handleDelete(h.id, dateShort(h.effectiveFrom))}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </span>
               </li>
             ))}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PageHeader from "../../components/ui/PageHeader.jsx";
 import Tabs from "../../components/ui/Tabs.jsx";
@@ -15,6 +15,8 @@ import PayrollTab from "../../components/hrm/profileTabs/PayrollTab.jsx";
 import TargetsTab from "../../components/hrm/profileTabs/TargetsTab.jsx";
 import PerformanceTab from "../../components/hrm/profileTabs/PerformanceTab.jsx";
 import TrainingsTab from "../../components/hrm/profileTabs/TrainingsTab.jsx";
+import DocumentsTab from "../../components/hrm/profileTabs/DocumentsTab.jsx";
+import DisciplinaryTab from "../../components/hrm/profileTabs/DisciplinaryTab.jsx";
 import Select from "../../components/ui/Select.jsx";
 import TextField from "../../components/ui/TextField.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
@@ -27,23 +29,18 @@ import { dateShort, initials } from "../../utils/format.js";
 
 const ASSIGNABLE_ROLES = ROLES.filter((r) => r !== "Super Admin");
 
-const TABS = [
+const ALL_TABS = [
   { key: "profile", label: "Profile" },
   { key: "employment", label: "Employment" },
-  { key: "documents", label: "Documents" },
+  { key: "documents", label: "Documents", perm: "document:read" },
   { key: "attendance", label: "Attendance" },
   { key: "leave", label: "Leave" },
   { key: "payroll", label: "Payroll" },
   { key: "performance", label: "Performance" },
   { key: "targets", label: "Targets" },
   { key: "trainings", label: "Trainings attended" },
-  { key: "disciplinary", label: "Disciplinary" },
+  { key: "disciplinary", label: "Disciplinary", perm: "disciplinary:read" },
 ];
-
-const PENDING_TAB = {
-  documents: "Documents & Contracts",
-  disciplinary: "Disciplinary Records",
-};
 
 export default function EmployeeProfile() {
   const { id } = useParams();
@@ -53,13 +50,18 @@ export default function EmployeeProfile() {
   const canWrite = can("employee:write");
   const canDeactivate = can("employee:deactivate");
   const isSuperAdmin = session?.role === "Super Admin";
+  // Exactly these three roles can delete employees and view/change logins.
+  const isOrgAdmin = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
 
   const [tab, setTab] = useState("profile");
   const [editing, setEditing] = useState(false);
   const [statusModal, setStatusModal] = useState(false);
   const [loginModal, setLoginModal] = useState(false);
+  const [manageLoginModal, setManageLoginModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const deleteAction = useMutation((client, empId) => client.delete(`/hrm/employees/${empId}`));
+
+  const TABS = ALL_TABS.filter((t) => !t.perm || can(t.perm));
 
   const { data: employee, loading, error, refetch } = useApiQuery(`/hrm/employees/${id}`);
 
@@ -115,6 +117,11 @@ export default function EmployeeProfile() {
                 Create login
               </Button>
             )}
+            {isOrgAdmin && employee.user && (
+              <Button variant="secondary" onClick={() => setManageLoginModal(true)}>
+                Manage login
+              </Button>
+            )}
             {canWrite && <Button onClick={() => setEditing(true)}>Edit</Button>}
             {canDeactivate && (
               <Button
@@ -124,7 +131,7 @@ export default function EmployeeProfile() {
                 {employee.status === "active" ? "Deactivate" : "Reactivate"}
               </Button>
             )}
-            {isSuperAdmin && (
+            {isOrgAdmin && (
               <Button variant="danger" onClick={() => setDeleteModal(true)}>
                 Delete
               </Button>
@@ -159,6 +166,7 @@ export default function EmployeeProfile() {
 
       {tab === "profile" && <ProfileTab e={employee} />}
       {tab === "employment" && <EmploymentTab e={employee} />}
+      {tab === "documents" && <DocumentsTab employee={employee} />}
       {tab === "attendance" && <AttendanceTab employee={employee} />}
       {tab === "leave" && <LeaveTab employee={employee} />}
       {tab === "payroll" && (
@@ -167,12 +175,7 @@ export default function EmployeeProfile() {
       {tab === "targets" && <TargetsTab employee={employee} />}
       {tab === "performance" && <PerformanceTab employee={employee} />}
       {tab === "trainings" && <TrainingsTab employee={employee} />}
-      {PENDING_TAB[tab] && (
-        <EmptyState
-          title={`${PENDING_TAB[tab]} not yet available`}
-          description={`This tab surfaces data from the ${PENDING_TAB[tab]} module, which is being built. It will populate automatically once that module is live.`}
-        />
-      )}
+      {tab === "disciplinary" && <DisciplinaryTab employee={employee} />}
 
       {editing && (
         <EmployeeForm
@@ -202,6 +205,17 @@ export default function EmployeeProfile() {
           onClose={() => setLoginModal(false)}
           onDone={() => {
             setLoginModal(false);
+            refetch();
+          }}
+        />
+      )}
+
+      {manageLoginModal && (
+        <ManageLoginModal
+          employee={employee}
+          onClose={() => setManageLoginModal(false)}
+          onDone={() => {
+            setManageLoginModal(false);
             refetch();
           }}
         />
@@ -308,6 +322,118 @@ function LoginModal({ employee, onClose, onDone }) {
           onChange={(e) => setPassword(e.target.value)}
           hint="Leave blank to auto-generate — shown once after saving. Either way the employee must change it on first sign-in."
         />
+      </div>
+    </Modal>
+  );
+}
+
+function ManageLoginModal({ employee, onClose, onDone }) {
+  const isSuperAdmin = useAuth((s) => s.session?.role === "Super Admin");
+  const assignableRoles = isSuperAdmin ? ROLES : ASSIGNABLE_ROLES;
+  const { data: login, loading, error: loadError } = useApiQuery(`/hrm/employees/${employee.id}/login`);
+  const [form, setForm] = useState(null);
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [tempPassword, setTempPassword] = useState(null);
+
+  useEffect(() => {
+    if (login) setForm({ email: login.email, role: login.role, status: login.status });
+  }, [login]);
+
+  async function save() {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await employeesApi.updateLogin(employee.id, form);
+      toast.success("Login details updated");
+      onDone();
+    } catch (e) {
+      setSaveError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function resetPassword() {
+    setResetting(true);
+    setSaveError("");
+    try {
+      const pw = await employeesApi.resetLoginPassword(employee.id);
+      setTempPassword(pw);
+      toast.success("Password reset — share the temporary password with the employee");
+    } catch (e) {
+      setSaveError(e.message);
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Manage login"
+      description={`${employee.firstName} ${employee.lastName}`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+          {form && (
+            <Button loading={saving} onClick={save}>
+              Save changes
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {loading && <Spinner size={18} />}
+        {loadError && <p className="text-sm text-red-600">{loadError.message}</p>}
+        {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+        {tempPassword && (
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            New temporary password: <span className="font-mono font-medium">{tempPassword}</span> — the employee
+            must change it on next sign-in.
+          </p>
+        )}
+        {form && (
+          <>
+            <TextField
+              label="Login email"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            />
+            <Select
+              label="Role"
+              options={assignableRoles}
+              value={form.role}
+              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+            />
+            <Select
+              label="Status"
+              options={[
+                { value: "active", label: "Active" },
+                { value: "suspended", label: "Suspended (login blocked)" },
+              ]}
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+            />
+            {login?.lastLoginAt && (
+              <p className="text-xs text-ink-500">Last signed in {dateShort(login.lastLoginAt)}</p>
+            )}
+            <div className="border-t border-ink-200 pt-3">
+              <Button type="button" variant="secondary" loading={resetting} onClick={resetPassword}>
+                Reset password
+              </Button>
+              <p className="mt-1.5 text-xs text-ink-500">
+                Generates a new temporary password and signs the employee out of this organization everywhere.
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   );

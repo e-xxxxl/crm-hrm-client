@@ -274,10 +274,13 @@ function DepartmentForm({ value, branchOptions, onClose, onSaved }) {
 
 function DepartmentDetail({ id, canWrite, onClose, onChanged, onEdit }) {
   const { data, loading, error, refetch } = useApiQuery(`/hrm/departments/${id}`);
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const dept = data?.department;
   const { mutate, loading: saving } = useMutation((client, status) =>
     client.patch(`/hrm/departments/${id}/status`, { status }),
   );
+  const removeM = useMutation((client) => client.delete(`/hrm/departments/${id}`));
 
   async function toggleStatus() {
     const next = dept.status === "active" ? "inactive" : "active";
@@ -291,6 +294,18 @@ function DepartmentDetail({ id, canWrite, onClose, onChanged, onEdit }) {
     }
   }
 
+  async function handleDelete() {
+    if (!confirm(`Delete department "${dept.name}"? This only works if no employee (past or present) is assigned to it.`)) return;
+    try {
+      await removeM.mutate();
+      toast.success("Department deleted");
+      onChanged();
+      onClose();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   return (
     <Drawer
       open
@@ -298,19 +313,27 @@ function DepartmentDetail({ id, canWrite, onClose, onChanged, onEdit }) {
       title={dept?.name || "Department"}
       description={dept?.code}
       footer={
-        canWrite &&
         dept && (
           <>
-            <Button variant="secondary" onClick={() => onEdit(dept)}>
-              Edit
-            </Button>
-            <Button
-              variant={dept.status === "active" ? "danger" : "primary"}
-              loading={saving}
-              onClick={toggleStatus}
-            >
-              {dept.status === "active" ? "Deactivate" : "Activate"}
-            </Button>
+            {canWrite && (
+              <Button variant="secondary" onClick={() => onEdit(dept)}>
+                Edit
+              </Button>
+            )}
+            {canWrite && (
+              <Button
+                variant={dept.status === "active" ? "danger" : "primary"}
+                loading={saving}
+                onClick={toggleStatus}
+              >
+                {dept.status === "active" ? "Deactivate" : "Activate"}
+              </Button>
+            )}
+            {canDelete && (
+              <Button variant="danger" loading={removeM.loading} onClick={handleDelete}>
+                Delete
+              </Button>
+            )}
           </>
         )
       }

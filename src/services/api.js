@@ -92,6 +92,20 @@ async function runRefresh() {
   throw lastErr;
 }
 
+/**
+ * The refresh token rotates on every use — a stale cookie gets a real 401.
+ * Two refresh calls in flight at once (e.g. React StrictMode double-invoking
+ * a mount effect, or a 401 interceptor firing while bootstrap is already
+ * refreshing) would otherwise race: whichever loses presents an
+ * already-rotated cookie and signs the user out. Every caller in the app —
+ * bootstrap included — must go through this single in-flight promise instead
+ * of calling runRefresh() directly.
+ */
+export function refreshAccessToken() {
+  if (!refreshPromise) refreshPromise = runRefresh().finally(() => (refreshPromise = null));
+  return refreshPromise;
+}
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -107,8 +121,7 @@ api.interceptors.response.use(
 
     config._retried = true;
     try {
-      if (!refreshPromise) refreshPromise = runRefresh().finally(() => (refreshPromise = null));
-      const token = await refreshPromise;
+      const token = await refreshAccessToken();
       config.headers.Authorization = `Bearer ${token}`;
       return api(config);
     } catch (refreshErr) {

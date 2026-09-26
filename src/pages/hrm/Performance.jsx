@@ -301,9 +301,13 @@ function CreateReview({ onClose, onSaved }) {
 }
 
 function KpiLibrary() {
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const list = useApiQuery("/hrm/performance/kpis");
   const [creating, setCreating] = useState(false);
   const { mutate, loading, error } = useMutation((client, body) => client.post("/hrm/performance/kpis", body));
+  const toggleActive = useMutation((client, { id, active }) => client.patch(`/hrm/performance/kpis/${id}`, { active }));
+  const removeKpi = useMutation((client, id) => client.delete(`/hrm/performance/kpis/${id}`));
   const [form, setForm] = useState({ name: "", category: "", unit: "", direction: "higher_better" });
   const errs = fieldErrors(error);
 
@@ -317,6 +321,27 @@ function KpiLibrary() {
       list.refetch();
     } catch {
       /* inline */
+    }
+  }
+
+  async function handleToggle(kpi) {
+    try {
+      await toggleActive.mutate({ id: kpi.id, active: !kpi.active });
+      toast.success(`${kpi.name} ${kpi.active ? "deactivated" : "activated"}`);
+      list.refetch();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
+  async function handleDelete(kpi) {
+    if (!confirm(`Delete KPI "${kpi.name}"? This only works if no target or review uses it.`)) return;
+    try {
+      await removeKpi.mutate(kpi.id);
+      toast.success(`${kpi.name} deleted`);
+      list.refetch();
+    } catch (e) {
+      toast.error(e.message);
     }
   }
 
@@ -339,6 +364,18 @@ function KpiLibrary() {
           { key: "direction", header: "Better when", render: (k) => (k.direction === "higher_better" ? "Higher" : "Lower") },
           { key: "active", header: "Status", render: (k) => <Badge status={k.active ? "active" : "inactive"} /> },
         ]}
+        rowActions={(kpi) => (
+          <div className="flex justify-end gap-3">
+            <button type="button" className="text-xs font-medium text-ink-500 hover:text-ink-700" onClick={() => handleToggle(kpi)}>
+              {kpi.active ? "Deactivate" : "Activate"}
+            </button>
+            {canDelete && (
+              <button type="button" className="text-xs font-medium text-red-600 hover:text-red-700" onClick={() => handleDelete(kpi)}>
+                Delete
+              </button>
+            )}
+          </div>
+        )}
       />
       {creating && (
         <Modal

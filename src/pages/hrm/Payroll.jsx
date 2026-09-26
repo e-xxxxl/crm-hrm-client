@@ -80,6 +80,13 @@ function Runs() {
           { key: "strategy", header: "Strategy", render: (r) => r.strategy },
           { key: "employees", header: "Employees", align: "right", render: (r) => r.totals?.employeeCount ?? 0 },
           {
+            key: "paye",
+            header: "Total PAYE",
+            align: "right",
+            secondary: true,
+            render: (r) => money(r.totals?.paye, { whole: true }),
+          },
+          {
             key: "net",
             header: "Net pay",
             align: "right",

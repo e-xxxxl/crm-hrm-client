@@ -9,22 +9,37 @@ import Textarea from "../ui/Textarea.jsx";
 import Alert from "../ui/Alert.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
 import { useMutation, fieldErrors } from "../../hooks/useMutation.js";
+import { useAuth } from "../../store/auth.js";
 import { toast } from "../../store/toast.js";
 import { days as fmtDays } from "../../utils/format.js";
 
 const CATEGORIES = ["annual", "casual", "sick", "maternity", "paternity", "compassionate", "unpaid", "other"];
 
 export default function LeaveTypeManager() {
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const list = useApiQuery("/hrm/leave/types", { params: {} });
   const [editing, setEditing] = useState(null);
   const toggle = useMutation((client, { id, active }) =>
     client.patch(`/hrm/leave/types/${id}/active`, { active }),
   );
+  const remove = useMutation((client, id) => client.delete(`/hrm/leave/types/${id}`));
 
   async function setActive(row, active) {
     try {
       await toggle.mutate({ id: row.id, active });
       toast.success(`${row.name} ${active ? "activated" : "deactivated"}`);
+      list.refetch();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
+  async function handleDelete(row) {
+    if (!confirm(`Delete leave type "${row.name}"? This only works if no leave request ever used it.`)) return;
+    try {
+      await remove.mutate(row.id);
+      toast.success(`${row.name} deleted`);
       list.refetch();
     } catch (e) {
       toast.error(e.message);
@@ -81,6 +96,15 @@ export default function LeaveTypeManager() {
             >
               {row.active ? "Deactivate" : "Activate"}
             </button>
+            {canDelete && (
+              <button
+                type="button"
+                className="text-xs font-medium text-red-600 hover:text-red-700"
+                onClick={() => handleDelete(row)}
+              >
+                Delete
+              </button>
+            )}
           </div>
         )}
       />

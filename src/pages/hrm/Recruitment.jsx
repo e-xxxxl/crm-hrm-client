@@ -183,6 +183,8 @@ export function JobPipelinePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const can = useAuth((s) => s.can);
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const { data, loading, error, refetch } = useApiQuery(`/hrm/recruitment/jobs/${id}/pipeline`);
   const [detailId, setDetailId] = useState(null);
   const [adding, setAdding] = useState(false);
@@ -191,6 +193,18 @@ export function JobPipelinePage() {
   const move = useMutation((client, { applicantId, toStage }) =>
     client.post(`/hrm/recruitment/applicants/${applicantId}/stage`, { stage: toStage }),
   );
+  const removeM = useMutation((client) => client.delete(`/hrm/recruitment/jobs/${id}`));
+
+  async function handleDeleteJob() {
+    if (!confirm(`Delete job posting "${job.title}"? This only works if it has no applicants.`)) return;
+    try {
+      await removeM.mutate();
+      toast.success("Job posting deleted");
+      navigate("/hrm/recruitment");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
 
   if (loading) return <div className="flex justify-center py-16 text-ink-400"><Spinner size={22} /></div>;
   if (error) return <EmptyState title="Job not found" description={error.message} action={<Button variant="secondary" onClick={() => navigate("/hrm/recruitment")}>Back</Button>} />;
@@ -215,6 +229,7 @@ export function JobPipelinePage() {
           <>
             <Button variant="secondary" onClick={() => navigate("/hrm/recruitment")}>Back</Button>
             {can("recruitment:write") && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
+            {canDelete && <Button variant="danger" loading={removeM.loading} onClick={handleDeleteJob}>Delete</Button>}
             {can("recruitment:write") && <Button onClick={() => setAdding(true)}>Add applicant</Button>}
           </>
         }
@@ -300,18 +315,47 @@ function AddApplicant({ jobId, onClose, onSaved }) {
 function ApplicantDetail({ id, onClose, onChanged }) {
   const { data: a, loading, error, refetch } = useApiQuery(`/hrm/recruitment/applicants/${id}`);
   const can = useAuth((s) => s.can);
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
   const [note, setNote] = useState("");
   const [interview, setInterview] = useState({ scheduledFor: "", mode: "video", location: "" });
   const noteM = useMutation((client, body) => client.post(`/hrm/recruitment/applicants/${id}/note`, body));
   const stageM = useMutation((client, body) => client.post(`/hrm/recruitment/applicants/${id}/stage`, body));
   const interviewM = useMutation((client, body) => client.post(`/hrm/recruitment/applicants/${id}/interviews`, body));
   const convertM = useMutation((client, body) => client.post(`/hrm/recruitment/applicants/${id}/convert`, body));
+  const removeM = useMutation((client) => client.delete(`/hrm/recruitment/applicants/${id}`));
 
   if (loading) return <Drawer open onClose={onClose} title="Applicant"><div className="flex justify-center py-10 text-ink-400"><Spinner size={22} /></div></Drawer>;
   if (error) return <Drawer open onClose={onClose} title="Applicant"><Alert tone="error">{error.message}</Alert></Drawer>;
 
+  async function handleDeleteApplicant() {
+    if (!confirm(`Delete applicant "${a.name}"?`)) return;
+    try {
+      await removeM.mutate();
+      toast.success("Applicant deleted");
+      onChanged?.();
+      onClose();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   return (
-    <Drawer open onClose={onClose} size="lg" title={a.name} description={a.jobPosting?.title}>
+    <Drawer
+      open
+      onClose={onClose}
+      size="lg"
+      title={a.name}
+      description={a.jobPosting?.title}
+      footer={
+        canDelete &&
+        !a.convertedToEmployee && (
+          <Button variant="danger" loading={removeM.loading} onClick={handleDeleteApplicant}>
+            Delete applicant
+          </Button>
+        )
+      }
+    >
       <div className="space-y-5 text-sm">
         <div className="flex items-center gap-2">
           <Badge status={a.stage}>{a.stage}</Badge>

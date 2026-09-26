@@ -8,17 +8,23 @@ import Textarea from "../ui/Textarea.jsx";
 import Alert from "../ui/Alert.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
 import { useMutation, fieldErrors } from "../../hooks/useMutation.js";
+import { useAuth } from "../../store/auth.js";
 import { toast } from "../../store/toast.js";
 
 /**
  * Org-scoped training catalog — the source list for the "Record training"
  * dropdown on an employee's Trainings attended tab. Only a Super Admin /
- * Group Admin can create or edit entries here.
+ * Group Admin can create new entries; HR Manager can additionally edit,
+ * (de)activate, and delete existing ones.
  */
 export default function TrainingManager() {
+  const canCreate = useAuth((s) => s.can("training:write"));
+  const session = useAuth((s) => s.session);
+  const canEdit = canCreate || session?.role === "HR Manager";
   const list = useApiQuery("/hrm/trainings", { params: {} });
   const [editing, setEditing] = useState(null);
   const toggle = useMutation((client, { id, active }) => client.patch(`/hrm/trainings/${id}/active`, { active }));
+  const remove = useMutation((client, id) => client.delete(`/hrm/trainings/${id}`));
 
   async function setActive(row, active) {
     try {
@@ -30,11 +36,22 @@ export default function TrainingManager() {
     }
   }
 
+  async function handleDelete(row) {
+    if (!confirm(`Delete training "${row.name}"? This only works if no attendance record ever used it.`)) return;
+    try {
+      await remove.mutate(row.id);
+      toast.success(`${row.name} deleted`);
+      list.refetch();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-ink-900">Training catalog</h2>
-        <Button onClick={() => setEditing("new")}>New training</Button>
+        {canCreate && <Button onClick={() => setEditing("new")}>New training</Button>}
       </div>
 
       <DataTable
@@ -50,16 +67,21 @@ export default function TrainingManager() {
           { key: "provider", header: "Provider", secondary: true, render: (r) => r.provider || "—" },
           { key: "active", header: "Status", render: (r) => <Badge status={r.active ? "active" : "inactive"} /> },
         ]}
-        rowActions={(row) => (
-          <div className="flex justify-end gap-3">
-            <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => setEditing(row)}>
-              Edit
-            </button>
-            <button type="button" className="text-xs font-medium text-ink-500 hover:text-ink-700" onClick={() => setActive(row, !row.active)}>
-              {row.active ? "Deactivate" : "Activate"}
-            </button>
-          </div>
-        )}
+        rowActions={(row) =>
+          canEdit && (
+            <div className="flex justify-end gap-3">
+              <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => setEditing(row)}>
+                Edit
+              </button>
+              <button type="button" className="text-xs font-medium text-ink-500 hover:text-ink-700" onClick={() => setActive(row, !row.active)}>
+                {row.active ? "Deactivate" : "Activate"}
+              </button>
+              <button type="button" className="text-xs font-medium text-red-600 hover:text-red-700" onClick={() => handleDelete(row)}>
+                Delete
+              </button>
+            </div>
+          )
+        }
       />
 
       {editing && (

@@ -117,6 +117,9 @@ function CaseForm({ onClose, onSaved }) {
 
 function CaseDetail({ id, onClose, onChanged }) {
   const { data: c, loading, error, refetch } = useApiQuery(`/hrm/disciplinary/${id}`);
+  const session = useAuth((s) => s.session);
+  const canDelete = ["Super Admin", "Group Admin", "HR Manager"].includes(session?.role);
+  const removeM = useMutation((client) => client.delete(`/hrm/disciplinary/${id}`));
   const [query, setQuery] = useState({ content: "", responseDueDate: "" });
   const [response, setResponse] = useState("");
   const [hearing, setHearing] = useState({ scheduledFor: "", location: "" });
@@ -142,8 +145,34 @@ function CaseDetail({ id, onClose, onChanged }) {
     }
   }
 
+  async function handleDelete() {
+    if (!confirm(`Delete disciplinary case "${c.reference}"? This cannot be undone.`)) return;
+    try {
+      await removeM.mutate();
+      toast.success("Disciplinary case deleted");
+      onChanged?.();
+      onClose();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   return (
-    <Drawer open onClose={onClose} size="lg" title={c ? `${c.reference} — ${c.employee?.firstName} ${c.employee?.lastName}` : "Case"} description={c ? label(c.category) : ""}>
+    <Drawer
+      open
+      onClose={onClose}
+      size="lg"
+      title={c ? `${c.reference} — ${c.employee?.firstName} ${c.employee?.lastName}` : "Case"}
+      description={c ? label(c.category) : ""}
+      footer={
+        c &&
+        canDelete && (
+          <Button variant="danger" loading={removeM.loading} onClick={handleDelete}>
+            Delete case
+          </Button>
+        )
+      }
+    >
       {loading && <div className="flex justify-center py-10 text-ink-400"><Spinner size={22} /></div>}
       {error && <Alert tone="error">{error.message}</Alert>}
       {c && (

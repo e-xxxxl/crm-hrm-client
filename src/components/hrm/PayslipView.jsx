@@ -100,7 +100,8 @@ export default function PayslipView({ id, onClose, onChanged }) {
             <details className="rounded-md border border-ink-200 p-2">
               <summary className="cursor-pointer text-xs font-medium text-ink-700">PAYE calculation</summary>
               <div className="mt-2 space-y-1 text-xs text-ink-600">
-                <p>Annual taxable income: {money(slip.taxDetail.taxableIncome)}</p>
+                <p className="text-ink-500">PAYE is charged on basic + housing + transport only.</p>
+                <p>Annual taxable income (basic + housing + transport): {money(slip.taxDetail.taxableIncome)}</p>
                 {slip.taxDetail.breakdown?.map((b, i) => (
                   <p key={i}>
                     {money(b.amount)} @ {(b.rate * 100).toFixed(0)}% = {money(b.tax)}
