@@ -271,6 +271,7 @@ function InvoiceForm({ onClose, onSaved }) {
 
 function InvoiceDetail({ id, canWrite, onClose, onChanged }) {
   const { data: invoice, loading, error, refetch } = useApiQuery(`/crm/invoices/${id}`);
+  const isSuperAdmin = useAuth((s) => s.session?.role === "Super Admin");
   const [sendModal, setSendModal] = useState(false);
   const voidM = useMutation((client) => client.patch(`/crm/invoices/${id}/status`, { status: "void" }));
   const paidM = useMutation((client) => client.patch(`/crm/invoices/${id}/status`, { status: "paid" }));
@@ -325,7 +326,7 @@ function InvoiceDetail({ id, canWrite, onClose, onChanged }) {
                 Void
               </Button>
             )}
-            {canWrite && invoice.status === "draft" && (
+            {(isSuperAdmin || (canWrite && invoice.status === "draft")) && (
               <Button variant="danger" loading={removeM.loading} onClick={handleDelete}>
                 Delete
               </Button>
