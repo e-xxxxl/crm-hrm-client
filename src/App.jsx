@@ -34,6 +34,8 @@ import RiderDetail from "./pages/crm/RiderDetail.jsx";
 import DispatchBoard from "./pages/crm/DispatchBoard.jsx";
 import Tasks from "./pages/crm/Tasks.jsx";
 import Sales from "./pages/crm/Sales.jsx";
+import Invoices from "./pages/crm/Invoices.jsx";
+import Emails from "./pages/crm/Emails.jsx";
 import Reports from "./pages/crm/Reports.jsx";
 import AuditLog from "./pages/shared/AuditLog.jsx";
 import BrandSettings from "./pages/crm/BrandSettings.jsx";
@@ -266,14 +268,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route
-            index
-            element={
-              <RequirePermission perm={["customer:read", "report:crm"]} mode="any">
-                <CrmOverview />
-              </RequirePermission>
-            }
-          />
+          <Route index element={<CrmIndex />} />
           <Route
             path="customers"
             element={
@@ -308,6 +303,8 @@ export default function App() {
           />
 
           <Route path="tasks" element={<RequirePermission perm="task:read"><Tasks /></RequirePermission>} />
+          <Route path="invoices" element={<RequirePermission perm="invoice:read"><Invoices /></RequirePermission>} />
+          <Route path="emails" element={<RequirePermission perm="communication:write"><Emails /></RequirePermission>} />
           <Route path="sales" element={<RequirePermission perm="report:crm"><Sales /></RequirePermission>} />
           <Route path="reports" element={<RequirePermission perm="report:crm"><Reports /></RequirePermission>} />
           <Route path="audit" element={<RequirePermission perm="audit:read"><AuditLog /></RequirePermission>} />
@@ -388,4 +385,20 @@ function HrIndex() {
   const canAttendance = useAuth((s) => s.can("attendance:read"));
   if (!canOverview && canAttendance) return <Navigate to="/hrm/attendance" replace />;
   return <HrOverview />;
+}
+
+/**
+ * Same idea as HrIndex, on the CRM side — HR Manager can reach the CRM
+ * workspace to edit riders (rider:read/write) but has neither
+ * customer:read nor report:crm, so the overview would otherwise 403.
+ */
+function CrmIndex() {
+  const canOverview = useAuth((s) => s.canAny("customer:read", "report:crm"));
+  const canRiders = useAuth((s) => s.can("rider:read"));
+  if (!canOverview && canRiders) return <Navigate to="/crm/riders" replace />;
+  return (
+    <RequirePermission perm={["customer:read", "report:crm"]} mode="any">
+      <CrmOverview />
+    </RequirePermission>
+  );
 }

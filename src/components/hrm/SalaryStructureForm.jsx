@@ -18,7 +18,8 @@ import { money } from "../../utils/format.js";
 // immediately loses the trailing ".", making decimals impossible to enter.
 const MONEY_FIELDS = [
   "basic", "housing", "transport", "subsidy", "dataAllowance",
-  "exGratia", "referralBonus", "overtime", "grossMonthly", "commissionPerTrip",
+  "exGratia", "referralBonus", "overtime", "latenessDeduction", "otherDeductions",
+  "grossMonthly", "commissionPerTrip",
 ];
 const toNum = (v) => {
   const n = Number(v);
@@ -35,6 +36,8 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
     exGratia: String(current?.exGratia ?? 0),
     referralBonus: String(current?.referralBonus ?? 0),
     overtime: String(current?.overtime ?? 0),
+    latenessDeduction: String(current?.latenessDeduction ?? 0),
+    otherDeductions: String(current?.otherDeductions ?? 0),
     grossMonthly: String(current?.grossMonthly ?? 0),
     commissionPerTrip: String(current?.commissionPerTrip ?? 0),
     payeApplicable: current?.payeApplicable ?? true,
@@ -137,6 +140,17 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
           </div>
         )}
 
+        <div>
+          <p className="label">Deductions (monthly)</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Lateness deduction" type="number" min="0" step="0.01" value={form.latenessDeduction} onChange={num("latenessDeduction")} />
+            <TextField label="Other deductions" type="number" min="0" step="0.01" value={form.otherDeductions} onChange={num("otherDeductions")} />
+          </div>
+          <p className="mt-1 text-xs text-ink-500">
+            Loan repayment isn't set here — it's calculated automatically from the employee's approved loan each payroll run.
+          </p>
+        </div>
+
         <div className="grid gap-2 sm:grid-cols-3">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.payeApplicable} onChange={chk("payeApplicable")} /> PAYE tax
@@ -169,6 +183,11 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
           <span className="font-medium text-ink-900">{money(previewGross)}</span>
           {strategy === "hybrid" && (
             <span className="text-ink-500"> + commission per completed trip</span>
+          )}
+          {(toNum(form.latenessDeduction) > 0 || toNum(form.otherDeductions) > 0) && (
+            <span className="text-ink-500">
+              {" "}less {money(toNum(form.latenessDeduction) + toNum(form.otherDeductions))} in deductions
+            </span>
           )}
         </div>
       </form>

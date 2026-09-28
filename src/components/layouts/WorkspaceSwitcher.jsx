@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/auth.js";
 
 const HRM_PERMS = ["employee:read", "attendance:read", "leave:read", "payroll:read", "payroll:read_own", "report:hr"];
-const CRM_PERMS = ["customer:read", "ticket:read", "shipment:read", "lead:read", "report:crm"];
+const CRM_PERMS = ["customer:read", "ticket:read", "shipment:read", "lead:read", "report:crm", "rider:read"];
 
 /**
  * Toggles between the HRM and CRM workspaces. Only shown when the signed-in

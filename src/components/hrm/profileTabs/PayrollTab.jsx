@@ -112,6 +112,8 @@ export default function PayrollTab({ employee, strategy }) {
                 {current.overtime > 0 && <Row label="Overtime" value={money(current.overtime)} />}
               </>
             )}
+            {current.latenessDeduction > 0 && <Row label="Lateness deduction" value={money(current.latenessDeduction)} />}
+            {current.otherDeductions > 0 && <Row label="Other deductions" value={money(current.otherDeductions)} />}
             <Row label="PAYE" value={current.payeApplicable ? "Yes" : "No"} />
             <Row label="Pension" value={current.pensionApplicable ? "Yes" : "No"} />
             <Row label="NHF" value={current.nhfApplicable ? "Yes" : "No"} />

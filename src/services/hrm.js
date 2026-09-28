@@ -83,16 +83,27 @@ export const payroll = {
   approveRun: (id) => api.post(`/hrm/payroll/runs/${id}/approve`).then((r) => r.data.data),
   finalizeRun: (id) => api.post(`/hrm/payroll/runs/${id}/finalize`).then((r) => r.data.data),
   cancelRun: (id) => api.post(`/hrm/payroll/runs/${id}/cancel`).then((r) => r.data.data),
+  reopenRun: (id) => api.post(`/hrm/payroll/runs/${id}/reopen`).then((r) => r.data.data),
+  deleteRun: (id) => api.delete(`/hrm/payroll/runs/${id}`).then((r) => r.data.data),
   bankExportUrl: (id) => `/hrm/payroll/runs/${id}/bank-export`,
   payslips: (params) => api.get("/hrm/payroll/payslips", { params }).then((r) => r.data),
   payslip: (id) => api.get(`/hrm/payroll/payslips/${id}`).then((r) => r.data.data),
   myPayslips: () => api.get("/hrm/payroll/payslips/mine").then((r) => r.data.data),
   markPaid: (id) => api.post(`/hrm/payroll/payslips/${id}/mark-paid`).then((r) => r.data.data),
+  markAllPaid: (runId) => api.post(`/hrm/payroll/runs/${runId}/mark-all-paid`).then((r) => r.data.data),
   payslipPdfUrl: (id) => `/hrm/payroll/payslips/${id}/pdf`,
   trips: (params) => api.get("/hrm/payroll/trips", { params }).then((r) => r.data),
   createTrip: (body) => api.post("/hrm/payroll/trips", body).then((r) => r.data.data),
   importTrips: (rows) => api.post("/hrm/payroll/trips/bulk", { rows }).then((r) => r.data.data),
   deleteTrip: (id) => api.delete(`/hrm/payroll/trips/${id}`).then((r) => r.data.data),
+};
+
+export const loans = {
+  mine: () => api.get("/hrm/loans/mine").then((r) => r.data.data),
+  apply: (body) => api.post("/hrm/loans", body).then((r) => r.data.data),
+  cancel: (id) => api.post(`/hrm/loans/${id}/cancel`).then((r) => r.data.data),
+  list: (params) => api.get("/hrm/loans", { params }).then((r) => r.data.data),
+  decide: (id, body) => api.post(`/hrm/loans/${id}/decide`, body).then((r) => r.data.data),
 };
 
 /** Fetch a binary endpoint with auth and trigger a browser download. */

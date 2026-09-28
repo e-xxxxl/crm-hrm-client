@@ -18,6 +18,7 @@ const STEP = { draft: 0, calculated: 1, approved: 2, finalized: 3, cancelled: -1
 export default function PayrollRunDetail({ id, onClose, onChanged }) {
   const { data, loading, error, refetch } = useApiQuery(`/hrm/payroll/runs/${id}`);
   const can = useAuth((s) => s.can);
+  const isSuperAdmin = useAuth((s) => s.session?.role === "Super Admin");
   const [payslipId, setPayslipId] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
@@ -25,6 +26,9 @@ export default function PayrollRunDetail({ id, onClose, onChanged }) {
   const approve = useMutation(() => payroll.approveRun(id));
   const finalize = useMutation(() => payroll.finalizeRun(id));
   const cancel = useMutation(() => payroll.cancelRun(id));
+  const reopen = useMutation(() => payroll.reopenRun(id));
+  const remove = useMutation(() => payroll.deleteRun(id));
+  const markAllPaid = useMutation(() => payroll.markAllPaid(id));
 
   const run = data?.run;
   const payslips = data?.payslips || [];
@@ -46,6 +50,18 @@ export default function PayrollRunDetail({ id, onClose, onChanged }) {
       await downloadFile(payroll.bankExportUrl(id), `payroll-${run.reference}.csv`);
     } catch (e) {
       toast.error(e.message || "Export failed");
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await remove.mutate();
+      toast.success("Payroll run deleted");
+      setConfirm(null);
+      onChanged?.();
+      onClose();
+    } catch (e) {
+      toast.error(e.message);
     }
   }
 
@@ -116,9 +132,24 @@ export default function PayrollRunDetail({ id, onClose, onChanged }) {
                 Bank CSV
               </Button>
             )}
+            {run.status === "finalized" && can("payroll:approve") && (
+              <Button variant="secondary" onClick={() => setConfirm("mark-all-paid")}>
+                Mark everyone paid
+              </Button>
+            )}
             {!["finalized", "cancelled"].includes(run.status) && can("payroll:run") && (
               <Button variant="danger" onClick={() => setConfirm("cancel")}>
                 Cancel run
+              </Button>
+            )}
+            {["approved", "finalized"].includes(run.status) && isSuperAdmin && (
+              <Button variant="secondary" onClick={() => setConfirm("reopen")}>
+                Reopen for correction
+              </Button>
+            )}
+            {isSuperAdmin && (
+              <Button variant="danger" onClick={() => setConfirm("delete")}>
+                Delete run
               </Button>
             )}
           </div>
@@ -180,7 +211,13 @@ export default function PayrollRunDetail({ id, onClose, onChanged }) {
               ? "Approve payroll run"
               : confirm === "finalize"
                 ? "Finalize payroll run"
-                : "Cancel payroll run"
+                : confirm === "mark-all-paid"
+                  ? "Mark everyone paid"
+                  : confirm === "reopen"
+                    ? "Reopen payroll run"
+                    : confirm === "delete"
+                      ? "Delete payroll run"
+                      : "Cancel payroll run"
           }
           footer={
             <>
@@ -195,6 +232,28 @@ export default function PayrollRunDetail({ id, onClose, onChanged }) {
               {confirm === "finalize" && (
                 <Button loading={finalize.loading} onClick={() => act(finalize, "Payroll finalized", finalize)}>
                   Finalize
+                </Button>
+              )}
+              {confirm === "mark-all-paid" && (
+                <Button
+                  loading={markAllPaid.loading}
+                  onClick={() => act(markAllPaid, "Every payslip marked paid", markAllPaid)}
+                >
+                  Mark everyone paid
+                </Button>
+              )}
+              {confirm === "reopen" && (
+                <Button
+                  variant="danger"
+                  loading={reopen.loading}
+                  onClick={() => act(reopen, "Payroll run reopened", reopen)}
+                >
+                  Reopen
+                </Button>
+              )}
+              {confirm === "delete" && (
+                <Button variant="danger" loading={remove.loading} onClick={handleDelete}>
+                  Delete permanently
                 </Button>
               )}
               {confirm === "cancel" && (
@@ -214,6 +273,12 @@ export default function PayrollRunDetail({ id, onClose, onChanged }) {
               "Approving locks the calculated figures. Recalculation is not possible after approval — cancel and recreate the run if numbers need to change."}
             {confirm === "finalize" &&
               "Finalizing marks the run complete, notifies every employee their payslip is available, and consumes the period's trip logs. This cannot be undone."}
+            {confirm === "mark-all-paid" &&
+              "Marks every payslip in this run that isn't already paid as paid, in one action — use this once you've disbursed the whole batch."}
+            {confirm === "reopen" &&
+              "Drops this run back to \"calculated\" so it can be recomputed, and releases any trip logs it had claimed. Blocked if any payslip here is already marked paid — correct those individually instead."}
+            {confirm === "delete" &&
+              "Permanently deletes this payroll run and its payslips. Blocked if any payslip here is already marked paid."}
             {confirm === "cancel" && "This deletes the run's payslips. Trip logs are released back to the pool."}
           </p>
         </Modal>

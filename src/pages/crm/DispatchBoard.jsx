@@ -217,7 +217,8 @@ function RoutePlanner({ riders }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const rows = shipments.data || [];
+  // Sea cargo / drop-off shipments never get a rider — leave them out of the route planner.
+  const rows = (shipments.data || []).filter((s) => (s.fulfillmentType || "pickup") === "pickup");
   const toggle = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   async function plan() {

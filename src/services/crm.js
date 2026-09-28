@@ -87,6 +87,18 @@ export const communications = {
   list: (params) => api.get("/crm/communications", { params }).then((r) => r.data),
   log: (body) => api.post("/crm/communications", body).then((r) => r.data.data),
   remove: (id) => api.delete(`/crm/communications/${id}`).then((r) => r.data.data),
+  sendEmail: (body) => api.post("/crm/emails/send", body).then((r) => r.data.data),
+};
+
+export const invoices = {
+  list: (params) => api.get("/crm/invoices", { params }).then((r) => r.data),
+  get: (id) => api.get(`/crm/invoices/${id}`).then((r) => r.data.data),
+  create: (body) => api.post("/crm/invoices", body).then((r) => r.data.data),
+  update: (id, body) => api.patch(`/crm/invoices/${id}`, body).then((r) => r.data.data),
+  setStatus: (id, status) => api.patch(`/crm/invoices/${id}/status`, { status }).then((r) => r.data.data),
+  remove: (id) => api.delete(`/crm/invoices/${id}`).then((r) => r.data.data),
+  send: (id, to) => api.post(`/crm/invoices/${id}/send`, to ? { to } : {}).then((r) => r.data.data),
+  pdfUrl: (id) => `/crm/invoices/${id}/pdf`,
 };
 
 export const sales = {

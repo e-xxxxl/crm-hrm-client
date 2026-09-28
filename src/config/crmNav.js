@@ -8,6 +8,8 @@ export const CRM_NAV = [
   { to: "/crm/customers", label: "Customers", perm: "customer:read" },
   { to: "/crm/tickets", label: "Tickets", perm: "ticket:read" },
   { to: "/crm/tasks", label: "Tasks", perm: "task:read" },
+  { to: "/crm/invoices", label: "Invoices", perm: "invoice:read" },
+  { to: "/crm/emails", label: "Emails", perm: "communication:write" },
 
   // AJCL — courier
   { to: "/crm/shipments", label: "Shipments", perm: "shipment:read", kind: "courier" },

@@ -18,7 +18,9 @@ import { money, dateTime, dateShort } from "../../utils/format.js";
 import { SHIPMENT_TONE, shLabel } from "./ShipmentList.jsx";
 
 const NEXT = {
-  created: ["pickup_requested", "rider_assigned"],
+  // "at_hub" direct from "created" is for drop_off/sea_cargo shipments,
+  // which skip rider assignment entirely.
+  created: ["pickup_requested", "rider_assigned", "at_hub"],
   pickup_requested: ["rider_assigned"],
   rider_assigned: ["picked_up"],
   picked_up: ["at_hub", "in_transit"],
@@ -143,12 +145,20 @@ export default function ShipmentDetail() {
           )}
 
           <Panel title="Rider">
-            <p className="text-sm text-ink-800">{s.riderName || "Unassigned"}</p>
-            {s.riderPhone && <p className="text-xs text-ink-500">{s.riderPhone}</p>}
-            {can("shipment:dispatch") && !s.isTerminal && (
-              <Button variant="secondary" className="mt-2" onClick={() => setRiderOpen(true)}>
-                {s.rider ? "Reassign" : "Assign rider"}
-              </Button>
+            {(s.fulfillmentType || "pickup") === "pickup" ? (
+              <>
+                <p className="text-sm text-ink-800">{s.riderName || "Unassigned"}</p>
+                {s.riderPhone && <p className="text-xs text-ink-500">{s.riderPhone}</p>}
+                {can("shipment:dispatch") && !s.isTerminal && (
+                  <Button variant="secondary" className="mt-2" onClick={() => setRiderOpen(true)}>
+                    {s.rider ? "Reassign" : "Assign rider"}
+                  </Button>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-ink-500">
+                {s.fulfillmentType === "sea_cargo" ? "Sea cargo" : "Drop-off"} — no rider needed.
+              </p>
             )}
           </Panel>
 

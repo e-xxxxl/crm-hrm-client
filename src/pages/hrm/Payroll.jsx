@@ -12,10 +12,12 @@ import EmptyState from "../../components/ui/EmptyState.jsx";
 import FilterBar from "../../components/ui/FilterBar.jsx";
 import PayrollRunDetail from "../../components/hrm/PayrollRunDetail.jsx";
 import PayslipView from "../../components/hrm/PayslipView.jsx";
+import Textarea from "../../components/ui/Textarea.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
 import { useMutation, fieldErrors } from "../../hooks/useMutation.js";
 import { useAuth } from "../../store/auth.js";
 import { toast } from "../../store/toast.js";
+import { loans as loansApi } from "../../services/hrm.js";
 import { money, dateShort } from "../../utils/format.js";
 
 const MONTHS = [
@@ -31,6 +33,7 @@ export default function Payroll() {
     isManager && { key: "runs", label: "Payroll runs" },
     isManager && { key: "payslips", label: "Payslips" },
     { key: "mine", label: "My payslips" },
+    { key: "loans", label: "Loans" },
   ].filter(Boolean);
 
   const [tab, setTab] = useState(isManager ? "runs" : "mine");
@@ -42,6 +45,7 @@ export default function Payroll() {
       {tab === "runs" && <Runs />}
       {tab === "payslips" && <AllPayslips />}
       {tab === "mine" && <MyPayslips />}
+      {tab === "loans" && <Loans />}
     </>
   );
 }
@@ -299,5 +303,268 @@ function MyPayslips() {
       />
       {viewId && <PayslipView id={viewId} onClose={() => setViewId(null)} />}
     </>
+  );
+}
+
+const LOAN_LABEL = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function Loans() {
+  const canManage = useAuth((s) => s.can("payroll:configure"));
+  const [applying, setApplying] = useState(false);
+  const mine = useApiQuery("/hrm/loans/mine");
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ink-900">My loan</h2>
+          <Button onClick={() => setApplying(true)}>Apply for a loan</Button>
+        </div>
+        {mine.loading ? (
+          <p className="py-6 text-center text-sm text-ink-400">Loading…</p>
+        ) : mine.error ? (
+          <EmptyState title="Could not load" description={mine.error.message} />
+        ) : (mine.data || []).length === 0 ? (
+          <p className="text-sm text-ink-500">You haven't applied for a loan.</p>
+        ) : (
+          <ul className="space-y-2">
+            {mine.data.map((l) => (
+              <MyLoanRow key={l.id} loan={l} onChanged={mine.refetch} />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {canManage && <ManageLoans />}
+
+      {applying && (
+        <ApplyLoanModal
+          onClose={() => setApplying(false)}
+          onSaved={() => {
+            setApplying(false);
+            mine.refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function MyLoanRow({ loan, onChanged }) {
+  const cancel = useMutation(() => loansApi.cancel(loan.id));
+
+  async function handleCancel() {
+    if (!confirm("Withdraw this loan request?")) return;
+    try {
+      await cancel.mutate();
+      toast.success("Loan request withdrawn");
+      onChanged();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
+  return (
+    <li className="card flex items-center justify-between gap-3 p-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-ink-900">
+          {money(loan.amount)} · {loan.repaymentMonths} month{loan.repaymentMonths === 1 ? "" : "s"} at {money(loan.monthlyDeduction)}/mo
+        </p>
+        <p className="mt-0.5 text-xs text-ink-500">
+          {loan.reason || "No reason given"} · requested {dateShort(loan.requestedAt)}
+        </p>
+        {["approved", "completed"].includes(loan.status) && (
+          <p className="mt-0.5 text-xs text-ink-500">Balance remaining: {money(loan.balanceRemaining)}</p>
+        )}
+        {loan.status === "rejected" && loan.decisionNote && (
+          <p className="mt-0.5 text-xs text-red-600">{loan.decisionNote}</p>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Badge status={loan.status === "completed" ? "completed" : loan.status === "pending" ? "pending" : loan.status === "rejected" || loan.status === "cancelled" ? "inactive" : "active"}>
+          {LOAN_LABEL(loan.status)}
+        </Badge>
+        {loan.status === "pending" && (
+          <button type="button" className="text-xs text-red-600 hover:text-red-700" onClick={handleCancel}>
+            Withdraw
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function ApplyLoanModal({ onClose, onSaved }) {
+  const [form, setForm] = useState({ amount: "", repaymentMonths: "1", reason: "" });
+  const { mutate, loading, error } = useMutation((client, body) => client.post("/hrm/loans", body));
+  const errs = fieldErrors(error);
+
+  async function submit(e) {
+    e.preventDefault();
+    try {
+      await mutate({
+        amount: Number(form.amount),
+        repaymentMonths: Number(form.repaymentMonths) || 1,
+        reason: form.reason || undefined,
+      });
+      toast.success("Loan request submitted");
+      onSaved();
+    } catch {
+      /* inline */
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Apply for a loan"
+      description="Capped at 50% of your current monthly gross salary."
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button form="loan-form" type="submit" loading={loading}>
+            Submit request
+          </Button>
+        </>
+      }
+    >
+      <form id="loan-form" onSubmit={submit} className="space-y-4">
+        {error && !error.details && (
+          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error.message}</p>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField
+            label="Amount (NGN)"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            value={form.amount}
+            error={errs.amount}
+            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+          />
+          <TextField
+            label="Repay over (months)"
+            type="number"
+            min="1"
+            max="24"
+            value={form.repaymentMonths}
+            error={errs.repaymentMonths}
+            onChange={(e) => setForm((f) => ({ ...f, repaymentMonths: e.target.value }))}
+            hint="1 month = deducted in full from next salary"
+          />
+        </div>
+        <Textarea
+          label="Reason"
+          rows={2}
+          value={form.reason}
+          onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+        />
+      </form>
+    </Modal>
+  );
+}
+
+function ManageLoans() {
+  const [status, setStatus] = useState("pending");
+  const list = useApiQuery("/hrm/loans", { params: { status: status || undefined } });
+  const [decidingId, setDecidingId] = useState(null);
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-ink-900">Loan requests</h2>
+        <Select
+          className="w-40"
+          options={["pending", "approved", "rejected", "completed", "cancelled"].map((s) => ({ value: s, label: LOAN_LABEL(s) }))}
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        />
+      </div>
+      <DataTable
+        loading={list.loading}
+        error={list.error}
+        onRetry={list.refetch}
+        rows={list.data || []}
+        keyField="id"
+        empty={{ title: "No loan requests", description: `No ${status} requests right now.` }}
+        columns={[
+          { key: "name", header: "Employee", primary: true, render: (l) => `${l.employee?.firstName} ${l.employee?.lastName}` },
+          { key: "amount", header: "Amount", align: "right", render: (l) => money(l.amount) },
+          { key: "monthly", header: "Monthly", align: "right", render: (l) => money(l.monthlyDeduction) },
+          { key: "balance", header: "Balance", align: "right", render: (l) => money(l.balanceRemaining) },
+          { key: "requested", header: "Requested", render: (l) => dateShort(l.requestedAt) },
+        ]}
+        rowActions={
+          status === "pending"
+            ? (l) => (
+                <div className="flex justify-end gap-3 text-xs">
+                  <button type="button" className="link" onClick={() => setDecidingId({ id: l.id, action: "approved" })}>
+                    Approve
+                  </button>
+                  <button type="button" className="text-red-600 hover:text-red-700" onClick={() => setDecidingId({ id: l.id, action: "rejected" })}>
+                    Reject
+                  </button>
+                </div>
+              )
+            : undefined
+        }
+      />
+
+      {decidingId && (
+        <DecideLoanModal
+          id={decidingId.id}
+          action={decidingId.action}
+          onClose={() => setDecidingId(null)}
+          onDone={() => {
+            setDecidingId(null);
+            list.refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function DecideLoanModal({ id, action, onClose, onDone }) {
+  const [note, setNote] = useState("");
+  const { mutate, loading } = useMutation((client, body) => client.post(`/hrm/loans/${id}/decide`, body));
+
+  async function submit() {
+    try {
+      await mutate({ status: action, note: note || undefined });
+      toast.success(action === "approved" ? "Loan approved" : "Loan rejected");
+      onDone();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={action === "approved" ? "Approve loan" : "Reject loan"}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant={action === "rejected" ? "danger" : "primary"} loading={loading} onClick={submit}>
+            {action === "approved" ? "Approve" : "Reject"}
+          </Button>
+        </>
+      }
+    >
+      <Textarea
+        label={action === "approved" ? "Note (optional)" : "Reason for rejection"}
+        rows={3}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
+    </Modal>
   );
 }

@@ -27,6 +27,7 @@ export default function ShipmentForm({ presetCustomer, onClose, onSaved }) {
     weightKg: "",
     declaredValue: "",
     serviceLevel: "standard",
+    fulfillmentType: "pickup",
     deliveryFee: "",
     codAmount: "",
     expectedDeliveryDate: "",
@@ -57,6 +58,7 @@ export default function ShipmentForm({ presetCustomer, onClose, onSaved }) {
         sender: form.sender,
         recipient: form.recipient,
         description: form.description || undefined,
+        fulfillmentType: form.fulfillmentType,
         packageType: form.packageType,
         weightKg: form.weightKg ? Number(form.weightKg) : undefined,
         declaredValue: form.declaredValue ? Number(form.declaredValue) : undefined,
@@ -129,6 +131,20 @@ export default function ShipmentForm({ presetCustomer, onClose, onSaved }) {
             )}
           </div>
         )}
+
+        <div>
+          <p className="label">Fulfillment</p>
+          <Select
+            options={[
+              { value: "pickup", label: "Pickup — rider collects from sender" },
+              { value: "drop_off", label: "Drop-off — sender brings it to a hub" },
+              { value: "sea_cargo", label: "Sea cargo — travels by ship" },
+            ]}
+            value={form.fulfillmentType}
+            onChange={set("fulfillmentType")}
+            hint={form.fulfillmentType !== "pickup" ? "No rider will be assigned to this shipment." : undefined}
+          />
+        </div>
 
         <PartyFields title="Sender" value={form.sender} onChange={setParty.bind(null, "sender")} err={errs.sender} />
         <PartyFields title="Recipient" value={form.recipient} onChange={setParty.bind(null, "recipient")} err={errs.recipient} />

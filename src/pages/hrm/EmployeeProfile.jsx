@@ -131,7 +131,7 @@ export default function EmployeeProfile() {
                 {employee.status === "active" ? "Deactivate" : "Reactivate"}
               </Button>
             )}
-            {isOrgAdmin && (
+            {isSuperAdmin && (
               <Button variant="danger" onClick={() => setDeleteModal(true)}>
                 Delete
               </Button>
