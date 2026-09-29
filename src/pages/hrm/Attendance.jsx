@@ -182,7 +182,7 @@ function DailyRegister() {
           },
           {
             key: "location",
-            header: "Location",
+            header: "Clock-in location",
             render: (r) =>
               r.clockIn ? (
                 <div className="min-w-0 max-w-[14rem]">
@@ -207,6 +207,39 @@ function DailyRegister() {
                     </a>
                   ) : (
                     <p className="mt-0.5 truncate text-xs text-ink-400">{formatLocation(r.clockIn)}</p>
+                  )}
+                </div>
+              ) : (
+                "—"
+              ),
+          },
+          {
+            key: "clockOutLocation",
+            header: "Clock-out location",
+            render: (r) =>
+              r.clockOut ? (
+                <div className="min-w-0 max-w-[14rem]">
+                  <div className="flex items-center gap-1.5">
+                    {r.clockOut.withinGeofence === false ? (
+                      <Badge tone="red">Outside geofence</Badge>
+                    ) : r.clockOut.withinGeofence ? (
+                      <Badge tone="green">On site</Badge>
+                    ) : (
+                      <Badge tone="neutral">Unverified</Badge>
+                    )}
+                  </div>
+                  {mapsLink(r.clockOut) ? (
+                    <a
+                      href={mapsLink(r.clockOut)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-0.5 block truncate text-xs text-brand-600 hover:underline"
+                      title={formatLocation(r.clockOut)}
+                    >
+                      {formatLocation(r.clockOut)}
+                    </a>
+                  ) : (
+                    <p className="mt-0.5 truncate text-xs text-ink-400">{formatLocation(r.clockOut)}</p>
                   )}
                 </div>
               ) : (

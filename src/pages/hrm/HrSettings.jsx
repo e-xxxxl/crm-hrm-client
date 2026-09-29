@@ -6,6 +6,7 @@ import TextField from "../../components/ui/TextField.jsx";
 import Alert from "../../components/ui/Alert.jsx";
 import Spinner from "../../components/ui/Spinner.jsx";
 import LeaveTypeManager from "../../components/hrm/LeaveTypeManager.jsx";
+import HolidayManager from "../../components/hrm/HolidayManager.jsx";
 import TrainingManager from "../../components/hrm/TrainingManager.jsx";
 import FileInput from "../../components/ui/FileInput.jsx";
 import { useApiQuery } from "../../hooks/useApiQuery.js";
@@ -36,6 +37,7 @@ export default function HrSettings() {
   const tabs = [
     { key: "operational", label: "Operational" },
     { key: "leave", label: "Leave types" },
+    { key: "holidays", label: "Holidays" },
     { key: "documents", label: "Document types" },
     { key: "notifications", label: "Notifications" },
   ];
@@ -48,6 +50,7 @@ export default function HrSettings() {
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
       {tab === "operational" && <OperationalSettings canWrite={canWrite} />}
       {tab === "leave" && <LeaveTypeManager />}
+      {tab === "holidays" && <HolidayManager />}
       {tab === "documents" && <DocumentTypes canWrite={canWrite} />}
       {tab === "notifications" && <NotificationSettings canWrite={canWrite} />}
       {tab === "trainings" && canSeeTrainingTab && <TrainingManager />}

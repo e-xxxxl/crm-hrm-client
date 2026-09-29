@@ -37,16 +37,19 @@ export default function ShipmentDetail() {
   const can = useAuth((s) => s.can);
   const { data: s, loading, error, refetch } = useApiQuery(`/crm/shipments/${id}`);
   const riders = useApiQuery("/crm/riders", { params: { status: "active", limit: 200 }, skip: !can("shipment:dispatch") });
+  const isSuperAdmin = useAuth((auth) => auth.session?.role === "Super Admin");
 
   const [statusModal, setStatusModal] = useState(null);
   const [podOpen, setPodOpen] = useState(false);
   const [riderOpen, setRiderOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const M = {
     status: useMutation((c, b) => c.post(`/crm/shipments/${id}/status`, b)),
     rider: useMutation((c, b) => c.post(`/crm/shipments/${id}/assign-rider`, b)),
     pod: useMutation((c, b) => c.post(`/crm/shipments/${id}/pod`, b)),
     cod: useMutation((c) => c.post(`/crm/shipments/${id}/remit-cod`)),
+    remove: useMutation((c) => c.delete(`/crm/shipments/${id}`)),
   };
 
   if (loading) return <div className="flex justify-center py-20 text-ink-400"><Spinner size={24} /></div>;
@@ -65,6 +68,16 @@ export default function ShipmentDetail() {
     }
   }
 
+  async function handleDelete() {
+    try {
+      await M.remove.mutate();
+      toast.success(`${s.trackingNumber} deleted`);
+      navigate("/crm/shipments");
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   const nextStatuses = NEXT[s.status] || [];
   const canDeliver = ["out_for_delivery", "in_transit", "at_hub"].includes(s.status);
 
@@ -78,7 +91,14 @@ export default function ShipmentDetail() {
             {s.codAmount > 0 && ` · COD ${money(s.codAmount, { whole: true })}`}
           </span>
         }
-        actions={<Button variant="secondary" onClick={() => navigate("/crm/shipments")}>Back</Button>}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => navigate("/crm/shipments")}>Back</Button>
+            {isSuperAdmin && (
+              <Button variant="danger" onClick={() => setDeleteOpen(true)}>Delete</Button>
+            )}
+          </>
+        }
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -237,6 +257,23 @@ export default function ShipmentDetail() {
             setPodOpen(false);
           }}
         />
+      )}
+      {deleteOpen && (
+        <Modal
+          open
+          onClose={() => setDeleteOpen(false)}
+          title="Delete shipment"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+              <Button variant="danger" loading={M.remove.loading} onClick={handleDelete}>Delete permanently</Button>
+            </>
+          }
+        >
+          <p className="text-sm text-ink-600">
+            Permanently delete <strong>{s.trackingNumber}</strong>? This removes the shipment and its tracking history. This cannot be undone.
+          </p>
+        </Modal>
       )}
     </>
   );

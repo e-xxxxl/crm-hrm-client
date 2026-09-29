@@ -29,6 +29,7 @@ const CATEGORY_TONE = {
   unpaid: "slate",
   other: "neutral",
 };
+const HOLIDAY_TONE = "red";
 
 export default function LeaveCalendar() {
   const [offset, setOffset] = useState(0);
@@ -88,15 +89,25 @@ export default function LeaveCalendar() {
                     {cell.day}
                   </span>
                   <div className="mt-1 space-y-1">
-                    {cell.items.slice(0, 3).map((it) => (
-                      <div
-                        key={it.id}
-                        className="truncate rounded bg-ink-100 px-1 py-0.5 text-2xs text-ink-700"
-                        title={`${it.employee} — ${it.leaveType} (${it.status})`}
-                      >
-                        {it.employee.split(" ")[0]} · {it.leaveType.split(" ")[0]}
-                      </div>
-                    ))}
+                    {cell.items.slice(0, 3).map((it) =>
+                      it.kind === "holiday" ? (
+                        <div
+                          key={it.id}
+                          className="truncate rounded bg-red-50 px-1 py-0.5 text-2xs font-medium text-red-700"
+                          title={it.name}
+                        >
+                          {it.name}
+                        </div>
+                      ) : (
+                        <div
+                          key={it.id}
+                          className="truncate rounded bg-ink-100 px-1 py-0.5 text-2xs text-ink-700"
+                          title={`${it.employee} — ${it.leaveType} (${it.status})`}
+                        >
+                          {it.employee.split(" ")[0]} · {it.leaveType.split(" ")[0]}
+                        </div>
+                      ),
+                    )}
                     {cell.items.length > 3 && (
                       <div className="text-2xs text-ink-400">+{cell.items.length - 3} more</div>
                     )}
@@ -111,23 +122,33 @@ export default function LeaveCalendar() {
             {(data?.items || []).length === 0 && (
               <EmptyState title="No leave this month" description="Nothing scheduled for the selected period." />
             )}
-            {(data?.items || []).map((it) => (
-              <li key={it.id} className="card p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-ink-900">{it.employee}</p>
-                    <p className="text-xs text-ink-500">
-                      {dateShort(it.startDate)} – {dateShort(it.endDate)} · {it.days}d
-                    </p>
+            {(data?.items || []).map((it) =>
+              it.kind === "holiday" ? (
+                <li key={it.id} className="card p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate text-sm font-medium text-ink-900">{it.name}</p>
+                    <Badge tone={HOLIDAY_TONE}>Holiday</Badge>
                   </div>
-                  <Badge tone={CATEGORY_TONE[it.category] || "neutral"}>{it.leaveType}</Badge>
-                </div>
-                <p className="mt-1 text-2xs uppercase tracking-wide text-ink-400">
-                  {it.status}
-                  {it.branch ? ` · ${it.branch}` : ""}
-                </p>
-              </li>
-            ))}
+                  <p className="text-xs text-ink-500">{dateShort(it.startDate)}</p>
+                </li>
+              ) : (
+                <li key={it.id} className="card p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink-900">{it.employee}</p>
+                      <p className="text-xs text-ink-500">
+                        {dateShort(it.startDate)} – {dateShort(it.endDate)} · {it.days}d
+                      </p>
+                    </div>
+                    <Badge tone={CATEGORY_TONE[it.category] || "neutral"}>{it.leaveType}</Badge>
+                  </div>
+                  <p className="mt-1 text-2xs uppercase tracking-wide text-ink-400">
+                    {it.status}
+                    {it.branch ? ` · ${it.branch}` : ""}
+                  </p>
+                </li>
+              ),
+            )}
           </ul>
         </>
       )}

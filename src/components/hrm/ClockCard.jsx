@@ -90,13 +90,25 @@ export default function ClockCard() {
 
       {rec?.clockIn && (
         <p className="mt-1.5 text-xs text-ink-500">
-          Location:{" "}
+          Clock-in location:{" "}
           {mapsLink(rec.clockIn) ? (
             <a href={mapsLink(rec.clockIn)} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
               {formatLocation(rec.clockIn)}
             </a>
           ) : (
             formatLocation(rec.clockIn)
+          )}
+        </p>
+      )}
+      {rec?.clockOut && (
+        <p className="mt-0.5 text-xs text-ink-500">
+          Clock-out location:{" "}
+          {mapsLink(rec.clockOut) ? (
+            <a href={mapsLink(rec.clockOut)} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+              {formatLocation(rec.clockOut)}
+            </a>
+          ) : (
+            formatLocation(rec.clockOut)
           )}
         </p>
       )}
