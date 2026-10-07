@@ -21,7 +21,7 @@ import { invoices as api, customers as customerApi } from "../../services/crm.js
 import { downloadFile } from "../../services/hrm.js";
 import { money, dateShort } from "../../utils/format.js";
 
-const NOTES_MAX_WORDS = 100;
+const NOTES_MAX_WORDS = 300;
 
 export default function Invoices() {
   const canWrite = useAuth((s) => s.can("invoice:write"));
@@ -278,7 +278,7 @@ function InvoiceForm({ onClose, onSaved }) {
         </div>
         <Textarea
           label="Notes"
-          rows={2}
+          rows={4}
           value={notes}
           error={errs.notes || (notesTooLong ? `Notes are limited to ${NOTES_MAX_WORDS} words — you have ${noteWords}` : undefined)}
           hint={`${noteWords} / ${NOTES_MAX_WORDS} words`}
