@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import clsx from "clsx";
 import { useAuth } from "../../store/auth.js";
@@ -8,6 +8,7 @@ import UserMenu from "./UserMenu.jsx";
 import WorkspaceSwitcher from "./WorkspaceSwitcher.jsx";
 import OrgSwitcher from "./OrgSwitcher.jsx";
 import { orgLogoFor } from "../../utils/orgLogo.js";
+import Spinner from "../ui/Spinner.jsx";
 
 /**
  * Shared application chrome for both the HRM and CRM workspaces: dark sidebar,
@@ -74,7 +75,16 @@ export default function AppShell({ nav, sectionLabel }) {
         </header>
 
         <main className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-          <Outlet />
+          {/* Pages are code-split; keep the sidebar/header up while one loads. */}
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-20 text-ink-400">
+                <Spinner size={22} />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>
@@ -88,7 +98,7 @@ function SidebarContent({ nav, sectionLabel, orgName, orgLogoUrl, onNavigate, wo
         {orgLogoUrl ? (
           <img src={orgLogoUrl} alt={orgName || "Organization logo"} className="h-9 max-w-[10rem] object-contain" />
         ) : (
-          <span className="truncate text-sm font-semibold text-white">{orgName || "CRM + HRM"}</span>
+          <span className="truncate text-sm font-semibold text-white">{orgName || "AJ Group Portal"}</span>
         )}
       </div>
 

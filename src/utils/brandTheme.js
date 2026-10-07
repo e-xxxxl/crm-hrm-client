@@ -33,4 +33,11 @@ export function applyBrandTheme(organizationType) {
   root.setProperty("--brand-700", colors[700]);
   root.setProperty("--brand-900", colors[900]);
   root.setProperty("--brand-800", colors[800]);
+
+  // Installed-app title bar / mobile browser chrome follows the sidebar colour.
+  const hex = colors[900]
+    .split(" ")
+    .map((n) => Number(n).toString(16).padStart(2, "0"))
+    .join("");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", `#${hex}`);
 }

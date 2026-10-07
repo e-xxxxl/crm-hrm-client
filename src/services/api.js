@@ -13,6 +13,7 @@ import axios from "axios";
  */
 
 const ACCESS_TOKEN_KEY = "crmhrm.accessToken";
+const PROFILE_KEY = "crmhrm.profile";
 
 let accessToken = safeGet(ACCESS_TOKEN_KEY);
 let refreshPromise = null;
@@ -34,6 +35,18 @@ function safeSet(key, value) {
   }
 }
 
+/** True when localStorage actually persists (it doesn't in some private modes). */
+export function storageWorks() {
+  try {
+    const k = "crmhrm.probe";
+    localStorage.setItem(k, "1");
+    localStorage.removeItem(k);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function getAccessToken() {
   return accessToken;
 }
@@ -43,6 +56,28 @@ export function setAccessToken(token) {
   safeSet(ACCESS_TOKEN_KEY, accessToken);
 }
 
+/**
+ * The last-known signed-in profile ({ user, session }). Not a secret — the
+ * server re-checks every request — it just lets a reload paint the app
+ * immediately and tolerate a slow/asleep API instead of showing a spinner or
+ * bouncing to the login page while the session is re-validated.
+ */
+export function readCachedProfile() {
+  try {
+    const raw = safeGet(PROFILE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed?.user && parsed?.session ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+export function writeCachedProfile(user, session) {
+  safeSet(PROFILE_KEY, JSON.stringify({ user, session }));
+}
+export function clearCachedProfile() {
+  safeSet(PROFILE_KEY, null);
+}
+
 /** Subscribe to forced-logout events (refresh failed). */
 export function onAuthExpired(fn) {
   listeners.add(fn);
@@ -50,6 +85,7 @@ export function onAuthExpired(fn) {
 }
 function emitExpired() {
   setAccessToken(null);
+  clearCachedProfile();
   for (const fn of listeners) fn();
 }
 
@@ -113,8 +149,14 @@ api.interceptors.response.use(
     if (!response || response.status !== 401 || config?._retried) {
       return Promise.reject(normaliseError(error));
     }
-    // Do not attempt to refresh the refresh/login calls themselves.
-    if (config.url?.includes("/auth/refresh") || config.url?.includes("/auth/login")) {
+    // Do not attempt to refresh the refresh/login calls themselves. select-org
+    // is part of sign-in too: its 401s mean "two-factor code needed/invalid",
+    // not "session expired".
+    if (
+      config.url?.includes("/auth/refresh") ||
+      config.url?.includes("/auth/login") ||
+      config.url?.includes("/auth/select-org")
+    ) {
       if (config.url?.includes("/auth/refresh")) emitExpired();
       return Promise.reject(normaliseError(error));
     }
@@ -125,7 +167,19 @@ api.interceptors.response.use(
       config.headers.Authorization = `Bearer ${token}`;
       return api(config);
     } catch (refreshErr) {
-      emitExpired();
+      // Only a definite "your session is gone" answer signs the user out. A
+      // network error or a 5xx from a waking API says nothing about the
+      // session, so the user stays signed in and the request just fails.
+      const s = refreshErr?.response?.status;
+      if (s === 401 || s === 403) {
+        if (refreshErr?.response?.data?.error?.code === "NO_REFRESH_COOKIE") {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[auth] The server did not receive the refresh cookie. If this keeps happening, the browser is blocking the cross-site cookie (check COOKIE_SECURE / COOKIE_SAMESITE / CLIENT_ORIGINS on the API).",
+          );
+        }
+        emitExpired();
+      }
       return Promise.reject(normaliseError(refreshErr));
     }
   },

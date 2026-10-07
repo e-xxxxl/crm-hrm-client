@@ -80,7 +80,7 @@ function BrandingSettings() {
     <div className="max-w-md space-y-4">
       <div>
         <p className="label">Organization logo</p>
-        <p className="mb-3 text-xs text-ink-500">Shown in the sidebar in place of "CRM + HRM" for everyone in this organization.</p>
+        <p className="mb-3 text-xs text-ink-500">Shown in the sidebar in place of "AJ Group Portal" for everyone in this organization.</p>
         {logoUrl && (
           <div className="mb-3 flex h-16 items-center rounded-md border border-ink-200 bg-sidebar px-4">
             <img src={logoUrl} alt="Organization logo" className="h-10 max-w-[10rem] object-contain" />

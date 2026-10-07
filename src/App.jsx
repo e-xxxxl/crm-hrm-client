@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./store/auth.js";
 import { applyBrandTheme } from "./utils/brandTheme.js";
@@ -7,56 +7,70 @@ import Spinner from "./components/ui/Spinner.jsx";
 import RequireAuth from "./components/guards/RequireAuth.jsx";
 import RequirePermission from "./components/guards/RequirePermission.jsx";
 
+// Only the login page ships in the first bundle. Everything else is split into
+// its own chunk and fetched on demand, so a cold load of /login (the most
+// common first visit) downloads a fraction of the app.
 import Login from "./pages/Login.jsx";
-import ChangePassword from "./pages/ChangePassword.jsx";
-import Security from "./pages/Security.jsx";
-import HRMLayout from "./layouts/HRMLayout.jsx";
 
-import CRMLayout from "./layouts/CRMLayout.jsx";
+const page = (loader, named) =>
+  lazy(() => (named ? loader().then((m) => ({ default: m[named] })) : loader()));
 
-import HrOverview from "./pages/hrm/HrOverview.jsx";
-import CrmOverview from "./pages/crm/CrmOverview.jsx";
-import CustomerList from "./pages/crm/CustomerList.jsx";
-import CustomerProfile from "./pages/crm/CustomerProfile.jsx";
-import TicketList from "./pages/crm/TicketList.jsx";
-import TicketDetail from "./pages/crm/TicketDetail.jsx";
-import ShipmentList from "./pages/crm/ShipmentList.jsx";
-import ShipmentDetail from "./pages/crm/ShipmentDetail.jsx";
-import OrderList from "./pages/crm/OrderList.jsx";
-import OrderDetail from "./pages/crm/OrderDetail.jsx";
-import BusinessList from "./pages/crm/BusinessList.jsx";
-import BusinessDetail from "./pages/crm/BusinessDetail.jsx";
-import LeadBoard from "./pages/crm/LeadBoard.jsx";
-import LeadDetail from "./pages/crm/LeadDetail.jsx";
-import ReviewQueue from "./pages/crm/ReviewQueue.jsx";
-import RiderList from "./pages/crm/RiderList.jsx";
-import RiderDetail from "./pages/crm/RiderDetail.jsx";
-import DispatchBoard from "./pages/crm/DispatchBoard.jsx";
-import Tasks from "./pages/crm/Tasks.jsx";
-import Sales from "./pages/crm/Sales.jsx";
-import Invoices from "./pages/crm/Invoices.jsx";
-import Emails from "./pages/crm/Emails.jsx";
-import Reports from "./pages/crm/Reports.jsx";
-import AuditLog from "./pages/shared/AuditLog.jsx";
-import BrandSettings from "./pages/crm/BrandSettings.jsx";
-import RiderLayout from "./layouts/RiderLayout.jsx";
-import RiderHome from "./pages/rider/RiderHome.jsx";
-import RiderJob from "./pages/rider/RiderJob.jsx";
-import EmployeeList from "./pages/hrm/EmployeeList.jsx";
-import EmployeeProfile from "./pages/hrm/EmployeeProfile.jsx";
-import DepartmentList from "./pages/hrm/DepartmentList.jsx";
-import BranchList from "./pages/hrm/BranchList.jsx";
-import Attendance from "./pages/hrm/Attendance.jsx";
-import Leave from "./pages/hrm/Leave.jsx";
-import Payroll from "./pages/hrm/Payroll.jsx";
-import Performance, { PerformanceReviewPage } from "./pages/hrm/Performance.jsx";
-import Targets from "./pages/hrm/Targets.jsx";
-import Recruitment, { JobPipelinePage } from "./pages/hrm/Recruitment.jsx";
-import Documents from "./pages/hrm/Documents.jsx";
-import Disciplinary from "./pages/hrm/Disciplinary.jsx";
-import HrReports from "./pages/hrm/HrReports.jsx";
-import HrSettings from "./pages/hrm/HrSettings.jsx";
-import Notifications from "./pages/hrm/Notifications.jsx";
+const ChangePassword = page(() => import("./pages/ChangePassword.jsx"));
+const Security = page(() => import("./pages/Security.jsx"));
+const HRMLayout = page(() => import("./layouts/HRMLayout.jsx"));
+const CRMLayout = page(() => import("./layouts/CRMLayout.jsx"));
+const RiderLayout = page(() => import("./layouts/RiderLayout.jsx"));
+
+const HrOverview = page(() => import("./pages/hrm/HrOverview.jsx"));
+const CrmOverview = page(() => import("./pages/crm/CrmOverview.jsx"));
+const CustomerList = page(() => import("./pages/crm/CustomerList.jsx"));
+const CustomerProfile = page(() => import("./pages/crm/CustomerProfile.jsx"));
+const TicketList = page(() => import("./pages/crm/TicketList.jsx"));
+const TicketDetail = page(() => import("./pages/crm/TicketDetail.jsx"));
+const ShipmentList = page(() => import("./pages/crm/ShipmentList.jsx"));
+const ShipmentDetail = page(() => import("./pages/crm/ShipmentDetail.jsx"));
+const OrderList = page(() => import("./pages/crm/OrderList.jsx"));
+const OrderDetail = page(() => import("./pages/crm/OrderDetail.jsx"));
+const BusinessList = page(() => import("./pages/crm/BusinessList.jsx"));
+const BusinessDetail = page(() => import("./pages/crm/BusinessDetail.jsx"));
+const LeadBoard = page(() => import("./pages/crm/LeadBoard.jsx"));
+const LeadDetail = page(() => import("./pages/crm/LeadDetail.jsx"));
+const ReviewQueue = page(() => import("./pages/crm/ReviewQueue.jsx"));
+const RiderList = page(() => import("./pages/crm/RiderList.jsx"));
+const RiderDetail = page(() => import("./pages/crm/RiderDetail.jsx"));
+const DispatchBoard = page(() => import("./pages/crm/DispatchBoard.jsx"));
+const Tasks = page(() => import("./pages/crm/Tasks.jsx"));
+const Sales = page(() => import("./pages/crm/Sales.jsx"));
+const Invoices = page(() => import("./pages/crm/Invoices.jsx"));
+const Emails = page(() => import("./pages/crm/Emails.jsx"));
+const Reports = page(() => import("./pages/crm/Reports.jsx"));
+const AuditLog = page(() => import("./pages/shared/AuditLog.jsx"));
+const BrandSettings = page(() => import("./pages/crm/BrandSettings.jsx"));
+const RiderHome = page(() => import("./pages/rider/RiderHome.jsx"));
+const RiderJob = page(() => import("./pages/rider/RiderJob.jsx"));
+const EmployeeList = page(() => import("./pages/hrm/EmployeeList.jsx"));
+const EmployeeProfile = page(() => import("./pages/hrm/EmployeeProfile.jsx"));
+const DepartmentList = page(() => import("./pages/hrm/DepartmentList.jsx"));
+const BranchList = page(() => import("./pages/hrm/BranchList.jsx"));
+const Attendance = page(() => import("./pages/hrm/Attendance.jsx"));
+const Leave = page(() => import("./pages/hrm/Leave.jsx"));
+const Payroll = page(() => import("./pages/hrm/Payroll.jsx"));
+const Performance = page(() => import("./pages/hrm/Performance.jsx"));
+const PerformanceReviewPage = page(() => import("./pages/hrm/Performance.jsx"), "PerformanceReviewPage");
+const Targets = page(() => import("./pages/hrm/Targets.jsx"));
+const Recruitment = page(() => import("./pages/hrm/Recruitment.jsx"));
+const JobPipelinePage = page(() => import("./pages/hrm/Recruitment.jsx"), "JobPipelinePage");
+const Documents = page(() => import("./pages/hrm/Documents.jsx"));
+const Disciplinary = page(() => import("./pages/hrm/Disciplinary.jsx"));
+const HrReports = page(() => import("./pages/hrm/HrReports.jsx"));
+const HrSettings = page(() => import("./pages/hrm/HrSettings.jsx"));
+const Notifications = page(() => import("./pages/hrm/Notifications.jsx"));
+
+const FullPageSpinner = () => (
+  <div className="flex min-h-screen items-center justify-center text-ink-400">
+    <Spinner size={24} />
+  </div>
+);
 
 export default function App() {
   const { status, bootstrap } = useAuth();
@@ -70,17 +84,12 @@ export default function App() {
     applyBrandTheme(organizationType);
   }, [organizationType]);
 
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-ink-400">
-        <Spinner size={24} />
-      </div>
-    );
-  }
+  if (status === "loading") return <FullPageSpinner />;
 
   return (
     <>
       <Toaster />
+      <Suspense fallback={<FullPageSpinner />}>
       <Routes>
         <Route path="/login" element={<Login />} />
 
@@ -354,6 +363,7 @@ export default function App() {
         <Route path="/" element={<LandingRedirect />} />
         <Route path="*" element={<LandingRedirect />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

@@ -97,7 +97,7 @@ export default function RiderJob() {
         {outForDelivery && (
           <>
             <Button className="w-full" variant="secondary" loading={busy} onClick={() => act("arrived", { at: "dropoff" })}>Arrived at drop-off</Button>
-            <Button className="w-full" loading={busy} onClick={() => setPod({ recipientName: "", relationship: "", otpVerified: false, photoUrl: "", signatureUrl: "", codCollected: job.codAmount > 0 })}>
+            <Button className="w-full" loading={busy} onClick={() => setPod({ recipientName: "", relationship: "", otpVerified: false, photoUrl: "", signatureUrl: "" })}>
               Complete delivery
             </Button>
             <Button className="w-full" variant="danger" loading={busy} onClick={() => setFailReason("")}>Delivery failed</Button>
@@ -129,11 +129,6 @@ export default function RiderJob() {
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={pod.otpVerified} onChange={(e) => setPod((p) => ({ ...p, otpVerified: e.target.checked }))} /> OTP verified
           </label>
-          {job.codAmount > 0 && (
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={pod.codCollected} onChange={(e) => setPod((p) => ({ ...p, codCollected: e.target.checked }))} /> Cash collected
-            </label>
-          )}
           <Button className="w-full" loading={busy} disabled={!pod.recipientName.trim()} onClick={() => act("delivered", pod)}>
             Confirm delivered
           </Button>

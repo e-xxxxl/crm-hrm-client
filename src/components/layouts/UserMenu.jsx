@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/auth.js";
+import { toast } from "../../store/toast.js";
+import { promptInstall, useInstallState } from "../../utils/installPrompt.js";
 
 export default function UserMenu({ name, email, role, avatar }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
   const logout = useAuth((s) => s.logout);
+  const installState = useInstallState();
 
   useEffect(() => {
     function onClick(e) {
@@ -78,6 +81,20 @@ export default function UserMenu({ name, email, role, avatar }) {
           >
             Change password
           </button>
+          {installState !== "none" && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={async () => {
+                setOpen(false);
+                if (installState === "prompt") await promptInstall();
+                else toast.info("In Safari, tap the Share button, then choose Add to Home Screen.");
+              }}
+              className="block w-full px-3 py-2 text-left text-sm text-ink-700 hover:bg-ink-50"
+            >
+              Install app
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

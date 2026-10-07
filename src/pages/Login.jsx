@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth.js";
 import { normaliseError } from "../services/api.js";
 import AuthLayout from "../layouts/AuthLayout.jsx";
@@ -64,6 +64,9 @@ export default function Login() {
       setBusy(false);
     }
   }
+
+  // Already signed in (e.g. a reload on /login restored the session).
+  if (status === "authenticated") return <Navigate to="/" replace />;
 
   if (step === 3) {
     return (

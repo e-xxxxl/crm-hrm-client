@@ -21,6 +21,8 @@ import { invoices as api, customers as customerApi } from "../../services/crm.js
 import { downloadFile } from "../../services/hrm.js";
 import { money, dateShort } from "../../utils/format.js";
 
+const NOTES_MAX_WORDS = 100;
+
 export default function Invoices() {
   const canWrite = useAuth((s) => s.can("invoice:write"));
   const [filters, setFilters] = useState({ status: "", kind: "" });
@@ -119,6 +121,14 @@ function InvoiceForm({ onClose, onSaved }) {
 
   const { mutate, loading, error } = useMutation((client, body) => client.post("/crm/invoices", body));
   const errs = fieldErrors(error);
+  // Errors on a specific line (e.g. "lineItems.1.unitPrice") have no field of
+  // their own above, so surface them instead of a bare "validation failed".
+  const lineItemProblems = (error?.details || [])
+    .filter((d) => String(d?.path || "").startsWith("lineItems"))
+    .map((d) => {
+      const m = /lineItems\.(\d+)\.?(\w*)/.exec(d.path);
+      return m ? `Line ${Number(m[1]) + 1}${m[2] ? ` ${m[2]}` : ""}: ${d.message}` : d.message;
+    });
 
   async function runSearch(v) {
     setTerm(v);
@@ -144,12 +154,19 @@ function InvoiceForm({ onClose, onSaved }) {
   const subtotal = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
   const total = subtotal + subtotal * ((Number(taxRate) || 0) / 100);
 
+  const noteWords = notes.trim() ? notes.trim().split(/\s+/).length : 0;
+  const notesTooLong = noteWords > NOTES_MAX_WORDS;
+  // Anything that can't be a real quantity falls back to 1, but a deliberate
+  // fraction such as 0.5 or 2.25 is kept as typed.
+  const qty = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 1);
+
   async function submit(e) {
     e.preventDefault();
     if (!customer) return toast.error("Select a customer");
+    if (notesTooLong) return toast.error(`Notes are limited to ${NOTES_MAX_WORDS} words (currently ${noteWords})`);
     const lineItems = items
       .filter((i) => i.description.trim())
-      .map((i) => ({ description: i.description, quantity: Number(i.quantity) || 1, unitPrice: Number(i.unitPrice) || 0 }));
+      .map((i) => ({ description: i.description, quantity: qty(i.quantity), unitPrice: Number(i.unitPrice) || 0 }));
     if (lineItems.length === 0) return toast.error("Add at least one line item");
     try {
       const invoice = await mutate({
@@ -185,6 +202,7 @@ function InvoiceForm({ onClose, onSaved }) {
     >
       <form id="invoice-form" onSubmit={submit} className="space-y-4">
         {error && !error.details && <Alert tone="error">{error.message}</Alert>}
+        {lineItemProblems.length > 0 && <Alert tone="error">{lineItemProblems.join(" · ")}</Alert>}
 
         {customer ? (
           <div className="flex items-center justify-between rounded-md border border-ink-200 bg-ink-50 px-3 py-2 text-sm">
@@ -238,7 +256,7 @@ function InvoiceForm({ onClose, onSaved }) {
                   <TextField placeholder="Description" value={item.description} onChange={(e) => setItem(i, "description", e.target.value)} />
                 </div>
                 <div className="col-span-2">
-                  <TextField type="number" min="0" placeholder="Qty" value={item.quantity} onChange={(e) => setItem(i, "quantity", e.target.value)} />
+                  <TextField type="number" min="0" step="any" inputMode="decimal" placeholder="Qty" value={item.quantity} onChange={(e) => setItem(i, "quantity", e.target.value)} />
                 </div>
                 <div className="col-span-3">
                   <TextField type="number" min="0" step="0.01" placeholder="Unit price" value={item.unitPrice} onChange={(e) => setItem(i, "unitPrice", e.target.value)} />
@@ -256,9 +274,16 @@ function InvoiceForm({ onClose, onSaved }) {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField label="Tax rate (%)" type="number" min="0" max="100" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
+          <TextField label="Tax rate (%)" type="number" min="0" max="100" step="any" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
         </div>
-        <Textarea label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <Textarea
+          label="Notes"
+          rows={2}
+          value={notes}
+          error={errs.notes || (notesTooLong ? `Notes are limited to ${NOTES_MAX_WORDS} words — you have ${noteWords}` : undefined)}
+          hint={`${noteWords} / ${NOTES_MAX_WORDS} words`}
+          onChange={(e) => setNotes(e.target.value)}
+        />
 
         <div className="rounded-md border border-ink-200 bg-ink-50 px-3 py-2 text-sm">
           Subtotal: <span className="font-medium">{money(subtotal)}</span>

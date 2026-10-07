@@ -360,7 +360,7 @@ function RiderModal({ riders, loading, onClose, onConfirm }) {
 }
 
 function PodModal({ loading, onClose, onConfirm }) {
-  const [f, setF] = useState({ recipientName: "", relationship: "", otpVerified: false, photoUrl: "", signatureUrl: "", codCollected: true });
+  const [f, setF] = useState({ recipientName: "", relationship: "", otpVerified: false, photoUrl: "", signatureUrl: "" });
   return (
     <Modal
       open
@@ -383,10 +383,6 @@ function PodModal({ loading, onClose, onConfirm }) {
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={f.otpVerified} onChange={(e) => setF((s) => ({ ...s, otpVerified: e.target.checked }))} />
           OTP verified with recipient
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={f.codCollected} onChange={(e) => setF((s) => ({ ...s, codCollected: e.target.checked }))} />
-          COD cash collected (if applicable)
         </label>
       </div>
     </Modal>
