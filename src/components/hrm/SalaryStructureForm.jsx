@@ -18,7 +18,7 @@ import { money } from "../../utils/format.js";
 // immediately loses the trailing ".", making decimals impossible to enter.
 const MONEY_FIELDS = [
   "basic", "housing", "transport", "subsidy", "dataAllowance",
-  "exGratia", "referralBonus", "overtime", "latenessDeduction", "otherDeductions",
+  "exGratia", "referralBonus", "overtime", "thirteenthMonth", "latenessDeduction", "otherDeductions",
   "grossMonthly", "commissionPerTrip",
 ];
 const toNum = (v) => {
@@ -36,6 +36,7 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
     exGratia: String(current?.exGratia ?? 0),
     referralBonus: String(current?.referralBonus ?? 0),
     overtime: String(current?.overtime ?? 0),
+    thirteenthMonth: String(current?.thirteenthMonth ?? 0),
     latenessDeduction: String(current?.latenessDeduction ?? 0),
     otherDeductions: String(current?.otherDeductions ?? 0),
     grossMonthly: String(current?.grossMonthly ?? 0),
@@ -55,7 +56,7 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
 
   const allowanceGross =
     toNum(form.basic) + toNum(form.housing) + toNum(form.transport) + toNum(form.subsidy) +
-    toNum(form.dataAllowance) + toNum(form.exGratia) + toNum(form.referralBonus) + toNum(form.overtime);
+    toNum(form.dataAllowance) + toNum(form.exGratia) + toNum(form.referralBonus) + toNum(form.overtime) + toNum(form.thirteenthMonth);
   const previewGross =
     strategy === "fixed-monthly" ? toNum(form.grossMonthly) || allowanceGross : allowanceGross;
 
@@ -124,6 +125,7 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
             <TextField label="Ex gratia" type="number" min="0" step="0.01" value={form.exGratia} onChange={num("exGratia")} />
             <TextField label="Referral bonus" type="number" min="0" step="0.01" value={form.referralBonus} onChange={num("referralBonus")} />
             <TextField label="Overtime" type="number" min="0" step="0.01" hint="Not taxed" value={form.overtime} onChange={num("overtime")} />
+            <TextField label="13th month salary" type="number" min="0" step="0.01" hint="Not taxed" value={form.thirteenthMonth} onChange={num("thirteenthMonth")} />
           </div>
         )}
 
@@ -137,6 +139,7 @@ export default function SalaryStructureForm({ employeeId, strategy, current, onC
             <TextField label="Ex gratia" type="number" min="0" step="0.01" value={form.exGratia} onChange={num("exGratia")} />
             <TextField label="Referral bonus" type="number" min="0" step="0.01" value={form.referralBonus} onChange={num("referralBonus")} />
             <TextField label="Overtime" type="number" min="0" step="0.01" hint="Not taxed" value={form.overtime} onChange={num("overtime")} />
+            <TextField label="13th month salary" type="number" min="0" step="0.01" hint="Not taxed" value={form.thirteenthMonth} onChange={num("thirteenthMonth")} />
           </div>
         )}
 

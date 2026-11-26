@@ -98,6 +98,7 @@ export default function PayrollTab({ employee, strategy }) {
                 {current.exGratia > 0 && <Row label="Ex gratia" value={money(current.exGratia)} />}
                 {current.referralBonus > 0 && <Row label="Referral bonus" value={money(current.referralBonus)} />}
                 {current.overtime > 0 && <Row label="Overtime" value={money(current.overtime)} />}
+                {current.thirteenthMonth > 0 && <Row label="13th month salary" value={money(current.thirteenthMonth)} />}
               </>
             )}
             {strategy === "allowance-based" && (
@@ -110,6 +111,7 @@ export default function PayrollTab({ employee, strategy }) {
                 {current.exGratia > 0 && <Row label="Ex gratia" value={money(current.exGratia)} />}
                 {current.referralBonus > 0 && <Row label="Referral bonus" value={money(current.referralBonus)} />}
                 {current.overtime > 0 && <Row label="Overtime" value={money(current.overtime)} />}
+                {current.thirteenthMonth > 0 && <Row label="13th month salary" value={money(current.thirteenthMonth)} />}
               </>
             )}
             {current.latenessDeduction > 0 && <Row label="Lateness deduction" value={money(current.latenessDeduction)} />}
@@ -132,7 +134,7 @@ export default function PayrollTab({ employee, strategy }) {
                   {money(
                     h.grossMonthly ||
                       h.basic + h.housing + h.transport + (h.subsidy || 0) + (h.dataAllowance || 0) +
-                        (h.exGratia || 0) + (h.referralBonus || 0) + (h.overtime || 0),
+                        (h.exGratia || 0) + (h.referralBonus || 0) + (h.overtime || 0) + (h.thirteenthMonth || 0),
                   )}
                   {h.reason ? ` — ${h.reason}` : ""}
                 </span>

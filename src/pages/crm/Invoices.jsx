@@ -18,6 +18,7 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue.js";
 import { useAuth } from "../../store/auth.js";
 import { toast } from "../../store/toast.js";
 import { invoices as api, customers as customerApi } from "../../services/crm.js";
+import { describeError } from "../../services/api.js";
 import { downloadFile } from "../../services/hrm.js";
 import { money, dateShort } from "../../utils/format.js";
 
@@ -121,14 +122,6 @@ function InvoiceForm({ onClose, onSaved }) {
 
   const { mutate, loading, error } = useMutation((client, body) => client.post("/crm/invoices", body));
   const errs = fieldErrors(error);
-  // Errors on a specific line (e.g. "lineItems.1.unitPrice") have no field of
-  // their own above, so surface them instead of a bare "validation failed".
-  const lineItemProblems = (error?.details || [])
-    .filter((d) => String(d?.path || "").startsWith("lineItems"))
-    .map((d) => {
-      const m = /lineItems\.(\d+)\.?(\w*)/.exec(d.path);
-      return m ? `Line ${Number(m[1]) + 1}${m[2] ? ` ${m[2]}` : ""}: ${d.message}` : d.message;
-    });
 
   async function runSearch(v) {
     setTerm(v);
@@ -201,8 +194,7 @@ function InvoiceForm({ onClose, onSaved }) {
       }
     >
       <form id="invoice-form" onSubmit={submit} className="space-y-4">
-        {error && !error.details && <Alert tone="error">{error.message}</Alert>}
-        {lineItemProblems.length > 0 && <Alert tone="error">{lineItemProblems.join(" · ")}</Alert>}
+        {error && <Alert tone="error">{describeError(error)}</Alert>}
 
         {customer ? (
           <div className="flex items-center justify-between rounded-md border border-ink-200 bg-ink-50 px-3 py-2 text-sm">
@@ -453,7 +445,7 @@ function SendInvoiceModal({ id, defaultTo, onClose, onSent }) {
       toast.success("Invoice emailed");
       onSent();
     } catch (e) {
-      toast.error(e.message);
+      toast.error(describeError(e));
     }
   }
 
@@ -473,7 +465,7 @@ function SendInvoiceModal({ id, defaultTo, onClose, onSent }) {
         </>
       }
     >
-      {error && <Alert tone="error" className="mb-3">{error.message}</Alert>}
+      {error && <Alert tone="error" className="mb-3">{describeError(error)}</Alert>}
       <TextField label="Send to" type="email" required value={to} onChange={(e) => setTo(e.target.value)} />
     </Modal>
   );

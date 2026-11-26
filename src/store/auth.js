@@ -8,6 +8,7 @@ import {
   writeCachedProfile,
   clearCachedProfile,
   storageWorks,
+  AUTH_TIMEOUT_MS,
 } from "../services/api.js";
 
 /**
@@ -73,7 +74,7 @@ export const useAuth = create((set, get) => {
 
     /** Step 1 — verify credentials. Returns the org list. */
     async login(email, password) {
-      const { data } = await api.post("/auth/login", { email, password });
+      const { data } = await api.post("/auth/login", { email, password }, { timeout: AUTH_TIMEOUT_MS });
       const ctx = data.data;
       set({ loginContext: ctx });
       if (ctx.organizations.length === 1) {
@@ -89,11 +90,11 @@ export const useAuth = create((set, get) => {
       const ctx = get().loginContext;
       if (!ctx) throw new Error("No login in progress");
       try {
-        const { data } = await api.post("/auth/select-org", {
-          userId: ctx.userId,
-          organizationId,
-          totp: totp || undefined,
-        });
+        const { data } = await api.post(
+          "/auth/select-org",
+          { userId: ctx.userId, organizationId, totp: totp || undefined },
+          { timeout: AUTH_TIMEOUT_MS },
+        );
         setAccessToken(data.data.accessToken);
         commit(data.data.user, data.data.session, { loginContext: null, pending2fa: null });
       } catch (err) {

@@ -4,6 +4,10 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import "./utils/installPrompt.js";
 import "./index.css";
+import { wakeApi } from "./services/api.js";
+
+// Start waking a sleeping API right away; see wakeApi().
+wakeApi();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

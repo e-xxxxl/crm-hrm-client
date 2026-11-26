@@ -92,8 +92,27 @@ function emitExpired() {
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
   withCredentials: true,
-  timeout: 30_000,
+  timeout: 60_000,
 });
+
+// Sign-in is the request most likely to be the first one after the API has
+// been asleep (free hosting spins idle services down and takes a minute or
+// more to wake them), so it is allowed to wait much longer than a normal call.
+export const AUTH_TIMEOUT_MS = 180_000;
+
+/**
+ * Fire-and-forget request that starts waking a sleeping API as soon as the app
+ * opens, so by the time someone has typed their email the server is usually
+ * already up. `no-cors` because the response is irrelevant — we only need the
+ * request to arrive — and it keeps a slow/blocked reply from logging console errors.
+ */
+export function wakeApi() {
+  try {
+    fetch(`${api.defaults.baseURL}/health`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
+  } catch {
+    /* best effort */
+  }
+}
 
 api.interceptors.request.use((config) => {
   if (accessToken) {
@@ -188,11 +207,47 @@ api.interceptors.response.use(
 /** Collapse an axios error into a plain object the UI can render. */
 export function normaliseError(error) {
   const payload = error?.response?.data?.error;
-  const err = new Error(payload?.message || error?.message || "Request failed");
+  const timedOut = error?.code === "ECONNABORTED" || /timeout of \d+ms exceeded/i.test(error?.message || "");
+  const err = new Error(
+    timedOut
+      ? "The server is taking too long to respond. It may be waking up from sleep, so please wait a moment and try again."
+      : payload?.message || error?.message || "Request failed",
+  );
   err.code = payload?.code || "ERROR";
   err.status = error?.response?.status;
   err.details = payload?.details;
   return err;
+}
+
+const FIELD_LABEL = {
+  customer: "Customer",
+  kind: "Type",
+  taxRate: "Tax rate",
+  notes: "Notes",
+  dueDate: "Due date",
+  to: "Recipient email",
+  description: "description",
+  quantity: "quantity",
+  unitPrice: "unit price",
+  lineItems: "Line items",
+};
+
+/**
+ * Human-readable text for an error. A validation failure carries the rejected
+ * fields in `details`; "Request validation failed" on its own tells nobody what
+ * to fix, so spell each one out ("Line 2 unit price: ...").
+ */
+export function describeError(error) {
+  const details = Array.isArray(error?.details) ? error.details : [];
+  if (details.length === 0) return error?.message || "Something went wrong";
+  const lines = details.map((d) => {
+    const parts = String(d?.path || "").split(".").filter(Boolean);
+    const line = parts[0] === "lineItems" && /^\d+$/.test(parts[1] || "") ? `Line ${Number(parts[1]) + 1}` : null;
+    const field = parts[parts.length - 1];
+    const label = [line, FIELD_LABEL[field] || field].filter(Boolean).join(" ");
+    return label ? `${label}: ${d.message}` : d.message;
+  });
+  return `${error.message}: ${lines.join(" · ")}`;
 }
 
 export default api;
